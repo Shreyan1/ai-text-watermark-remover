@@ -198,42 +198,43 @@ one of them.
 The 8/8 above is our own curated set and is worth little on its own. It measures
 whether the mechanism fires, not whether the model is right. Measured on **SNLI
 validation** (Bowman et al., EMNLP 2015, human-annotated and not written by us),
-n=150, `gemma3:4b`:
+n=150, `gemma3:4b`, with the original class-definitions prompt:
 
 | metric | value | what it means here |
 |---|---|---|
 | 3-class accuracy | 0.587 | against ~0.88 human and ~0.92 SOTA; a 4B general model is not a trained NLI head |
 | **contradiction precision** | **0.923** | when it rejects a rewrite, it is right 92% of the time |
-| **contradiction recall** | **0.444** | it catches under half of real contradictions |
-| unparseable replies | 4/150 | counted, never silently treated as "no finding" |
-| cost | 3.0s per pair | local, on GPU |
+| contradiction recall | 0.444 | original prompt; the improvement is below |
 
-Confusion, rows are gold and columns are predicted:
+The confusion matrix showed the whole problem in one cell: contradiction became
+neutral 27 times out of 30 misses. The model was not confusing contradiction
+with entailment, it was retreating to "no finding" when unsure. That is a prompt
+problem before it is a model problem, so we swept four prompts on the same rows
+(`tests/harness/nli_prompt_sweep.py`, n=100), scoring the contradiction class:
 
-| | entailment | neutral | contradiction |
+| prompt | precision | recall | F1 |
 |---|---|---|---|
-| **entailment** | 41 | 8 | 0 |
-| **neutral** | 22 | 23 | 2 |
-| **contradiction** | 3 | 27 | **24** |
+| original | 1.000 | 0.432 | 0.604 |
+| **strict-neutral** (new default) | **0.950** | **0.514** | **0.667** |
+| few-shot (`high_recall=True`) | 0.781 | 0.676 | 0.725 |
 
-**This corrects the impression the 8/8 gives.** On real data the NLI gate does
-not close the lexical gap. It narrows it, from 0% coverage to roughly 44%, and it
-does so at high precision. The dominant error is contradiction becoming neutral,
-27 cases: the model is conservative and defaults to "no finding" rather than
-falsely accusing a rewrite.
+Naming NEUTRAL as the *narrow* label rather than the safe one, and forcing a
+"could both be true at the same moment?" test, buys 8 points of recall for one
+false positive in 100. That is now the default. Few-shot reaches 0.68 recall but
+drops precision to 0.78, which for a gate that blocks a user's rewrite means 7
+good rewrites wrongly rejected per 100, so it ships opt-in rather than as the
+default.
 
-For a gate that blocks a user's work that is the right direction to fail, and
-precision is the metric that decides usability. At 0.923 it rarely destroys good
-work. But anyone reading "8/8" as "fact corruption is solved" would be wrong. The
-honest summary:
+For a blocking gate, precision is the metric that decides usability. The honest
+summary stands:
 
 > **Rules catch what they catch, deterministically. NLI adds partial coverage of
 > reworded reversal at low false-alarm cost. Neither is a guarantee.**
 
 Both figures are bounds. SNLI is *harder* than our actual task, being full of
 subtle neutral distinctions, whereas we only ever compare a sentence to a rewrite
-of itself, a narrower and more contrastive distribution. So 0.444 is a
-conservative lower bound for this use. The curated 8/8 is an upper bound. The
+of itself, a narrower and more contrastive distribution, so these are
+conservative lower bounds for this use. The curated 8/8 is an upper bound. The
 truth is between, and we report both rather than picking the flattering one.
 
 ### 9. File provenance: what survives a perfect rewrite
@@ -369,8 +370,9 @@ file-level provenance is removed and what survives is reported.
   outside can measure it, and any project claiming otherwise has not measured it
   either.
 - **Fact preservation as a guarantee.** NLI narrows the reworded-reversal gap
-  (0% to roughly 44% recall at 92% precision). It does not close it. A rewrite
-  can still corrupt meaning in ways nothing here detects.
+  (rules alone catch 0% of it; the tuned default catches about half at high
+  precision). It does not close it. A rewrite can still corrupt meaning in ways
+  nothing here detects.
 - **A production-grade regenerator.** A 1B model is weak, and output quality
   tracks model quality directly.
 - **A calibrated human-versus-AI boundary.** The scorer separates (AUROC 0.876),

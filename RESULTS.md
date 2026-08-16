@@ -218,8 +218,45 @@ a sentence to a rewrite of itself, a narrower and more contrastive distribution.
 So 0.444 is a conservative lower bound here. The curated 8/8 is an upper bound.
 We report both rather than the flattering one.
 
-Improving it is a backend swap, not a redesign (`NLIBackend` is one method): a
-trained cross-encoder on MNLI+VitaminC is the obvious next step, and
+### Improving recall: prompt sweep
+
+The confusion matrix says exactly where the recall went: contradiction -> neutral,
+27 of the 30 misses. The model was not confusing contradiction with entailment,
+it was retreating to NEUTRAL when unsure. So the first lever is the prompt, not a
+bigger model. Four variants on the same SNLI rows (`tests/harness/nli_prompt_sweep.py`,
+n=100, gemma3:4b), scored on the contradiction class only:
+
+| variant | precision | recall | F1 |
+|---|---|---|---|
+| A original prompt | 1.000 | 0.432 | 0.604 |
+| **B strict-neutral** (new default) | **0.950** | **0.514** | **0.667** |
+| C few-shot (`high_recall=True`) | 0.781 | 0.676 | 0.725 |
+| D binary decomposition | 0.464 | 0.865 | 0.604 |
+
+**B is the new default.** Naming NEUTRAL as the *narrow* label rather than the
+safe one, and forcing the "could both be true at the same moment?" test, recovers
+8 points of recall for a single false positive in 100. That is a strict
+improvement for a blocking gate.
+
+C (six labelled examples, weighted toward hard contradictions) reaches 0.676
+recall but precision falls to 0.781: 7 false positives in 100, i.e. 7 good
+rewrites wrongly rejected. That trade is wrong for a default gate, so C ships as
+opt-in `OllamaNLIBackend(high_recall=True)` for callers who would rather
+over-flag and review than miss an inversion.
+
+D (rephrase as one yes/no question, "could both be true?") is the cautionary
+row. Recall jumps to 0.865, but precision collapses to 0.464: it calls almost
+everything a conflict, so more than half of what it rejects is a good rewrite. A
+gate at that precision would be worse than no gate, because users would learn to
+ignore it. High recall alone is not the goal, which is why the target was always
+recall *at usable precision*.
+
+The lesson: the recall ceiling here is not mostly the model, it is how willing
+the prompt makes the model to commit, and the useful range is narrow. Best F1
+without touching the backend went 0.604 -> 0.725; the honest default sits at B.
+
+The larger lever remains a backend swap, not a redesign (`NLIBackend` is one
+method): a trained cross-encoder on MNLI+VitaminC is the obvious next step, and
 self-consistency voting (`votes>1`) trades cost for calibration.
 
 **Ceiling, for context.** NLI-based factual consistency is not a solved problem

@@ -36,18 +36,51 @@ from .nli import NLIBackend, NLIScores
 # NLI accuracy, we let the model reason and require a DELIMITED final answer.
 # One protocol, works for both families, and the delimiter makes parsing exact
 # instead of hunting for a label inside prose that names all three.
+#
+# The prompt below is the "strict-neutral" wording, chosen by measurement. The
+# original prompt just defined the three classes; on SNLI it retreated to NEUTRAL
+# whenever unsure, which is where nearly all the missed contradictions went
+# (confusion matrix: contradiction -> neutral was the dominant error). Naming
+# NEUTRAL as the narrow label rather than the safe one, and forcing the
+# "could both be true at the same moment?" test, lifted contradiction recall
+# from 0.43 to 0.51 at a cost of a single false positive in 100. See
+# tests/harness/nli_prompt_sweep.py for the A/B/C/D comparison.
 _SYSTEM = (
     "You are a natural language inference classifier. Given a PREMISE and a "
     "HYPOTHESIS, decide:\n"
-    "ENTAILMENT - the hypothesis must be true if the premise is true\n"
-    "CONTRADICTION - the hypothesis cannot be true if the premise is true\n"
-    "NEUTRAL - neither; the hypothesis adds or omits information but does not "
-    "conflict\n\n"
-    "Judge only whether both can be true at once. Different wording with the "
-    "same meaning is ENTAILMENT. Wording that reverses the direction, outcome, "
-    "or polarity of a claim is CONTRADICTION, even with no negation word.\n\n"
+    "ENTAILMENT - if the premise is true, the hypothesis must also be true\n"
+    "CONTRADICTION - the premise and the hypothesis cannot both be true of the "
+    "same situation\n"
+    "NEUTRAL - both could be true at once; the hypothesis just adds detail the "
+    "premise does not settle\n\n"
+    "NEUTRAL is the narrowest label, not the safe one. Before choosing it, ask: "
+    "could both sentences describe the same situation at the same moment? If they "
+    "could not, the answer is CONTRADICTION, even when no negation word appears "
+    "and even when only one detail conflicts. Different wording with the same "
+    "meaning is ENTAILMENT.\n\n"
     "Think briefly if you need to, then end your reply with exactly:\n"
     "ANSWER: <ENTAILMENT|CONTRADICTION|NEUTRAL>"
+)
+
+# Opt-in higher-recall variant. Six labelled examples weighted toward hard
+# contradictions push recall to ~0.68, but precision falls to ~0.78 (7 false
+# positives in 100). For a gate that BLOCKS a user's rewrite a false positive is
+# a rejected good rewrite, so this is not the default; it is offered for callers
+# who would rather over-flag and review than miss an inversion.
+_FEW_SHOT = (
+    "\n\nExamples:\n"
+    "PREMISE: A man is playing a guitar on stage.\n"
+    "HYPOTHESIS: A man is performing music.\nANSWER: ENTAILMENT\n\n"
+    "PREMISE: A man is playing a guitar on stage.\n"
+    "HYPOTHESIS: A man is asleep in bed.\nANSWER: CONTRADICTION\n\n"
+    "PREMISE: A man is playing a guitar on stage.\n"
+    "HYPOTHESIS: The man is playing his own songs.\nANSWER: NEUTRAL\n\n"
+    "PREMISE: Two children run across a grassy field.\n"
+    "HYPOTHESIS: The children are sitting still indoors.\nANSWER: CONTRADICTION\n\n"
+    "PREMISE: Sales climbed steadily through the summer.\n"
+    "HYPOTHESIS: Sales were disappointing all summer.\nANSWER: CONTRADICTION\n\n"
+    "PREMISE: A woman in a red coat waits at a bus stop.\n"
+    "HYPOTHESIS: A woman waits for the bus in the rain.\nANSWER: NEUTRAL\n"
 )
 
 _LABELS = ("contradiction", "entailment", "neutral")
@@ -73,6 +106,7 @@ class OllamaNLIBackend(NLIBackend):
         votes: int = 1,
         num_predict: int = 400,
         think: bool | None = False,
+        high_recall: bool = False,
     ) -> None:
         if "cloud" in model.lower():
             raise ValueError(
@@ -81,6 +115,10 @@ class OllamaNLIBackend(NLIBackend):
             )
         self.model = model
         self.host = host
+        #: high_recall appends few-shot examples: recall ~0.68 vs ~0.51, at the
+        #: cost of precision ~0.78 vs ~0.95. Off by default because the gate
+        #: blocks user work and a false positive rejects a good rewrite.
+        self.system = _SYSTEM + (_FEW_SHOT if high_recall else "")
         #: >1 turns the hard label into a vote share (self-consistency), at cost.
         self.votes = max(1, votes)
         #: Must be generous: a reasoning model truncated mid-thought emits no
@@ -99,7 +137,7 @@ class OllamaNLIBackend(NLIBackend):
             f"PREMISE: {premise}\nHYPOTHESIS: {hypothesis}",
             model=self.model, host=self.host,
             temperature=temperature, num_predict=self.num_predict,
-            system=_SYSTEM, think=self.think,
+            system=self.system, think=self.think,
         )
         m = None
         for m in _ANSWER.finditer(raw):  # last delimited answer wins
