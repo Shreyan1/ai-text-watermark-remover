@@ -12,7 +12,7 @@ of the scheme.
 
 ```bash
 git clone https://github.com/Shreyan1/ai-text-watermark-remover
-cd ai-text-watermark-remover && pip install -e .
+cd ai-text-watermark-remover && pipx install -e .
 
 reweave meta  --dry-run answer.md   # what provenance does this file carry?
 reweave meta  --rename   answer.md  # strip it, and the vendor name in the filename
@@ -22,6 +22,19 @@ reweave facts before.md after.md    # did a rewrite keep the facts?
 
 reweave fix   --rename   answer.md  # all of the above, looped until the file stops changing
 ```
+
+`pipx` is the recommended installer: it keeps the `reweave` command isolated and
+on your PATH, and it works where a bare `pip install -e .` is refused, which is
+what a current Homebrew or system Python does now that it is externally managed
+(PEP 668). If you would rather use a virtualenv, `python3 -m venv .venv && source
+.venv/bin/activate && pip install -e .` is equivalent. Either way the install is
+editable, so pulling new commits needs no reinstall.
+
+**Platform.** Tested on macOS only (Apple silicon, Python 3.14). Stage 0 reads
+extended attributes, which on macOS goes through `/usr/bin/xattr`; a Linux xattr
+path (`os.*xattr`, `user.xdg.origin.url`) is implemented but not yet exercised,
+and on a platform with neither it raises rather than reporting a false clean.
+Everything from Stage 1 on is pure Python and platform-neutral.
 
 Start with `meta --dry-run`. On a file saved from a chat UI it usually finds the
 source URL sitting in an extended attribute, untouched by anything you do to the
