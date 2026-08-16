@@ -36,6 +36,7 @@ Zero dependencies: `os.*xattr` and `zipfile` are stdlib.
 
 from __future__ import annotations
 
+import base64
 import os
 import re
 import shutil
@@ -219,9 +220,12 @@ _UUID = re.compile(
     r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 )
 _QS_CREDENTIAL = re.compile(r"cred|access|secret|(?:^|[-_])key|apikey", re.I)
-_QS_SIGNATURE = re.compile(r"sig|signature", re.I)
+#: Matches `X-Tos-Signature` but NOT `X-Tos-SignedHeaders`, which lists which
+#: headers were signed and is not itself a secret.
+_QS_SIGNATURE = re.compile(r"signature|(?:^|[-_])sig(?:$|[-_])", re.I)
 _QS_EXPIRY = re.compile(r"expir|ttl|\bdate\b", re.I)
 _QS_TOKEN = re.compile(r"token|auth|nonce", re.I)
+_QS_FILENAME = re.compile(r"filename|\bname\b|disposition", re.I)
 
 
 def _short(value: str, limit: int = 32) -> str:
@@ -254,9 +258,37 @@ def _url_provenance_parts(url: str) -> list[tuple[str, str]]:
             parts.append((f"signature ({key})", _short(val)))
         elif _QS_EXPIRY.search(key):
             parts.append((f"expiry ({key})", _short(val, 24)))
+        elif _QS_FILENAME.search(key):
+            # A readable filename is not an opaque token, and calling it one
+            # buried the fact that the vendor named the file for you.
+            parts.append((f"filename ({key})", _short(val, 48)))
         elif _QS_TOKEN.search(key) or (len(val) >= 24 and "/" not in val):
-            parts.append((f"token ({key})", _short(val)))
+            # "Opaque" is often a guess. Gemini's `c=` decodes to
+            # bard_storage / response_data / <id>, which pins the file to one
+            # specific generation. Name it for what it is when it decodes.
+            decoded = _decode_ids(val)
+            if decoded:
+                parts.append((f"response-id ({key})", decoded))
+            else:
+                parts.append((f"token ({key})", _short(val)))
     return parts
+
+
+def _decode_ids(value: str) -> str:
+    """The identifier inside a base64 blob, or "" if it really is opaque."""
+    if len(value) < 16 or not re.fullmatch(r"[A-Za-z0-9_\-+/=]+", value):
+        return ""
+    for pad in range(4):
+        try:
+            blob = base64.urlsafe_b64decode(value + "=" * pad)
+        except Exception:  # noqa: BLE001 - not base64 is a normal answer here
+            continue
+        found = [m.decode() for m in re.findall(rb"[\x20-\x7e]{6,}", blob)]
+        if not found:
+            break
+        # The longest run is the identifier; the rest are field names around it.
+        return max(found, key=len)
+    return ""
 
 
 def _highlights_for_value(value: str) -> tuple[tuple[str, str], ...]:

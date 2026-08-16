@@ -58,27 +58,13 @@ def cmd_score(args: argparse.Namespace) -> int:
     return 0
 
 
-def _why(label: str) -> str:
-    """One line on why a URL component identifies the user, for the dry run."""
-    head = label.split(" ", 1)[0]
-    return {
-        "credential": "-> an access credential tied to your account",
-        "signature": "-> signs the request, proving it came from your session",
-        "file-id": "-> a unique id for this exact file or response",
-        "expiry": "-> when the signed link was minted",
-        "token": "-> an opaque identifier that can be traced back",
-    }.get(head, "")
-
-
-def _print_finding(f, marker: str) -> None:
-    print(f"  {marker} {f}   @ {f.location}")
-    for label, snippet in f.highlights:
-        why = _why(label)
-        print(f"      - {label}: {snippet}" + (f"  {why}" if why else ""))
+def _shell_quote(path: str) -> str:
+    return f'"{path}"' if " " in path else path
 
 
 def cmd_meta(args: argparse.Namespace) -> int:
     """Stage ⓪ - provenance in the file, not the prose."""
+    from .report import S, render_finding
     from .scrub.metadata_scrubber import XattrUnsupported
 
     scrubber = resolve(KIND_METADATA, args.adapter)(rename=args.rename)
@@ -88,29 +74,49 @@ def cmd_meta(args: argparse.Namespace) -> int:
         print(f"! {e}", file=sys.stderr)
         return 2
 
-    verb = "found" if args.dry_run else "handled"
-    print(f"{args.path}: {report.summary()}")
+    print()
+    print(S.b(args.path))
     if report.clean:
+        print(f"  {S.green}no provenance found{S.off}, this file gives nothing away")
+        print()
         return 0
 
-    for f in (report.findings if args.dry_run else report.removed):
-        _print_finding(f, "·" if args.dry_run else "✓")
-    for f in report.unremovable:
-        _print_finding(f, "! SURVIVED ")
-
-    if getattr(scrubber, "renamed_to", None):
-        print(f"  -> renamed to {scrubber.renamed_to}")
-    elif any(f.layer == "filename" for f in report.unremovable):
-        suggested = scrubber.suggested_name(args.path)
-        print(f"    the filename itself names the source; suggested: {suggested!r}")
-        print("    (pass --rename to apply; not done implicitly)")
-
-    if report.unremovable:
-        print("\n  Some traces were not removed. macOS re-creates "
-              "com.apple.provenance on write;\n  PDF fields need a library that "
-              "rebuilds the xref table. Reported, not hidden.")
+    n = len(report.findings)
     if args.dry_run:
-        print(f"\n  ({verb} only - re-run without --dry-run to remove)")
+        removable = sum(1 for f in report.findings if f.removable)
+        note = "all removable" if removable == n else f"{n - removable} cannot be removed"
+        print(f"  {n} trace{'s' if n != 1 else ''} found, {note}")
+    else:
+        print(f"  {len(report.removed)} of {n} removed")
+    print()
+
+    shown = report.findings if args.dry_run else report.removed
+    suggestion = scrubber.suggested_name(args.path)
+    for i, f in enumerate(shown, 1):
+        # Only offer the rename hint when a rename has not already happened.
+        sugg = (suggestion if f.layer == "filename" and not getattr(
+            scrubber, "renamed_to", None) else None)
+        for line in render_finding(f, i, removed=not args.dry_run, suggested=sugg):
+            print(line)
+
+    survivors = [f for f in report.unremovable if f not in shown]
+    if survivors:
+        print(f"  {S.yellow}still present{S.off}")
+        for f in survivors:
+            print(f"    {f.key}: {f.value[:60]}")
+        print(S.d("    PDF fields need a library that rebuilds the xref table."))
+        print(S.d("    Reported rather than hidden."))
+        print()
+
+    # What to do next, spelled out as a command that can be pasted.
+    if getattr(scrubber, "renamed_to", None):
+        print(f"  {S.green}renamed{S.off} to {scrubber.renamed_to}")
+    elif args.dry_run:
+        has_name = any(f.layer == "filename" for f in report.findings)
+        cmd = f"reweave meta {'--rename ' if has_name else ''}{_shell_quote(args.path)}"
+        print(S.d("  nothing was changed (--dry-run)"))
+        print(f"  to clean it:  {S.b(cmd)}")
+    print()
     return 0
 
 
