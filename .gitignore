@@ -1,0 +1,24 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.env
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+tests/harness/corpora/
+dataset/generated/
+dataset/synthid/
+dataset/nli/
+
+# Third-party papers are cited, never redistributed — publishing a copyrighted
+# PDF in a public repo is not ours to do. dataset/fetch.py gets what it needs.
+*.pdf
+*.gguf
+*.bin
+*.safetensors
+.DS_Store
