@@ -72,15 +72,24 @@ def test_finds_and_removes_chat_provenance(tmp_path=None):
 
 def test_filename_is_treated_as_provenance():
     """`ChatGPT-Victoria Memorial Essay.md` names its source in the one place
-    everyone sees first. Found because a real download arrived that way."""
+    everyone sees first. Found because a real download arrived that way. The
+    non-Western labs (Kimi, Qwen, DeepSeek) tag downloads the same way, so the
+    detector has to know their names too, not just the six Western vendors."""
     s = FileMetadataScrubber()
     tmp = Path(__import__("tempfile").mkdtemp())
-    f = tmp / "ChatGPT-Quarterly Notes.md"
-    f.write_text("Nothing incriminating in the prose at all.\n", encoding="utf-8")
+    for name, expected in (
+        ("ChatGPT-Quarterly Notes.md", "Quarterly Notes.md"),
+        ("Kimi-Quarterly Notes.md", "Quarterly Notes.md"),
+        ("Qwen-Quarterly Notes.md", "Quarterly Notes.md"),
+        ("Deepseek-Quarterly Notes.md", "Quarterly Notes.md"),
+    ):
+        f = tmp / name
+        f.write_text("Nothing incriminating in the prose at all.\n", encoding="utf-8")
+        report = s.inspect(str(f))
+        assert any(x.layer == "filename" for x in report.findings), name
+        assert s.suggested_name(str(f)) == expected, name
 
-    report = s.inspect(str(f))
-    assert any(x.layer == "filename" for x in report.findings)
-    assert s.suggested_name(str(f)) == "Quarterly Notes.md"
+    f = tmp / "ChatGPT-Quarterly Notes.md"
 
     # Renaming changes the caller's path, so it must never happen implicitly.
     FileMetadataScrubber().scrub_file(str(f))
@@ -99,17 +108,57 @@ def test_clean_file_reports_clean():
     assert report.clean, [str(x) for x in report.findings]
 
 
+#: Which host each vendor's download actually points at. Data-driven so adding a
+#: seventh vendor is a one-line change, not a new `or` branch. Verified against
+#: the real `kMDItemWhereFroms` values on the downloaded fixtures.
+_EXPECTED_HOST = {
+    "chatgpt": ("chatgpt", "openai"),
+    "gemini": ("gemini", "google"),
+    "grok": ("grok", "x.ai", "x.com"),
+    "deepseek": ("deepseek",),
+    "kimi": ("kimi", "volces", "moonshot"),
+    "qwen": ("qwen", "aliyun", "tongyi"),
+}
+
+
 def test_real_fixtures_carry_source_urls():
-    """The whole point, on genuine files rather than ones we constructed."""
-    fixtures = sorted(ROOT.glob("tests/*Victoria Memorial Essay.md"))
+    """The whole point, on genuine files rather than ones we constructed.
+
+    git does not preserve extended attributes, so a bare clone has none and
+    per-file checks are skipped there. On the machine where these were actually
+    downloaded, every fixture's where-from must name its own vendor's host.
+    """
+    fixtures = sorted(ROOT.glob("tests/*Victoria Memorial*.md"))
     if not fixtures:
         return  # fixtures not present in this checkout
 
     s = FileMetadataScrubber()
     for path in fixtures:
         report = s.inspect(str(path))
-        urls = [x.value for x in report.findings if x.key.endswith("kMDItemWhereFroms")]
-        assert urls, f"{path.name} should carry a source URL"
-        assert any("chatgpt" in u or "gemini" in u or "google" in u for u in urls), urls
+        urls = [x.value.lower() for x in report.findings
+                if x.key.endswith("kMDItemWhereFroms")]
+        if not urls:
+            continue  # xattrs stripped by git; nothing to check on this copy
+        vendor = path.name.split("-", 1)[0].lower()
+        expected = _EXPECTED_HOST.get(vendor, (vendor,))
+        assert any(any(e in u for e in expected) for u in urls), (path.name, urls)
         # And the prose alone gives none of this away.
-        assert "chatgpt" not in path.read_text(encoding="utf-8").lower()
+        assert vendor not in path.read_text(encoding="utf-8").lower()
+
+
+def test_signed_url_provenance_parts_are_extracted():
+    """A signed storage URL leaks a credential, not just a domain. The Kimi
+    download carried a ByteDance TOS pre-signed URL; the report must point at the
+    embedded access key and signature, or it undersells the exposure."""
+    s = FileMetadataScrubber()
+    kimi = ROOT / "tests" / "Kimi-Victoria Memorial Essay.md"
+    if not kimi.exists():
+        return
+    report = s.inspect(str(kimi))
+    xattr = [f for f in report.findings if f.key.endswith("kMDItemWhereFroms")]
+    if not xattr or "volces" not in xattr[0].value.lower():
+        return  # bare clone (no xattrs) or a non-signed copy
+    labels = {label.split(" ", 1)[0] for label, _ in xattr[0].highlights}
+    assert "credential" in labels, xattr[0].highlights
+    assert "signature" in labels, xattr[0].highlights
+    assert "file-id" in labels, xattr[0].highlights

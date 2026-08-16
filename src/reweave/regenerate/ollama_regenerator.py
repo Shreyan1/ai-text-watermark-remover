@@ -5,16 +5,18 @@ VoiceProfile toward burstiness, contractions, the author's vocabulary, away from
 AI tells. The fresh token sequence it emits is what severs any watermark.
 
 WHY THIS IS SAFE (the Self-Watermark Trap, ARCHITECTURE.md §1):
-`llama3.2:1b` run locally is open-weight and unwatermarked, so `is_unwatermarked`
-is truthfully True. We deliberately do NOT default to a hosted Google model
-(e.g. `gemma:*-cloud`): a hosted frontier model may carry SynthID, which would
-re-stamp a fresh watermark and defeat the pipeline. Point this at a local
-open-weight model only.
+the default `gemma3:4b`, run locally, is open-weight and unwatermarked, so
+`is_unwatermarked` is truthfully True. SynthID-Text and green-list watermarks are
+decode-time processors that live in a serving stack, not in the weights you pull
+(see `_ollama._WATERMARK_SAFE` for the citations). The construction guard refuses
+any hosted model and any local model off the verified-unwatermarked allowlist, so
+a rewrite cannot silently be produced by something that re-stamps a mark. Point
+this at a local open-weight model only.
 """
 
 from __future__ import annotations
 
-from .._ollama import generate
+from .._ollama import assert_watermark_safe, generate
 from ..core.interfaces import Regenerator
 from ..core.registry import KIND_REGENERATOR, register
 from ..core.types import Document, Meaning, VoiceProfile
@@ -36,17 +38,15 @@ class OllamaRegenerator(Regenerator):
     """Local, open-weight regeneration. The real Stage ③."""
 
     name = "ollama"
-    is_unwatermarked = True  # TRUE only because llama3.2:1b is local + open-weight
+    is_unwatermarked = True  # TRUE only because the model is local + open-weight
 
-    def __init__(self, model: str = "llama3.2:1b", host: str = "http://localhost:11434") -> None:
+    def __init__(self, model: str = "gemma3:4b", host: str = "http://localhost:11434",
+                 allow_unlisted: bool = False) -> None:
+        # Guard the invariant at construction: refuse a hosted model, or a local
+        # one not verified watermark-free, unless the caller opts in explicitly.
+        assert_watermark_safe(model, allow_unlisted=allow_unlisted)
         self.model = model
         self.host = host
-        if "cloud" in model.lower():
-            # Guard the invariant at construction: a hosted model may re-watermark.
-            raise ValueError(
-                f"refusing model {model!r}: a hosted/cloud model may carry its own "
-                "watermark (Self-Watermark Trap). Use a local open-weight model."
-            )
 
     def _prompt(self, meaning: Meaning, voice: VoiceProfile, aggressiveness: float) -> str:
         points = "\n".join(f"- {p.intent}" for p in meaning.points)

@@ -58,6 +58,25 @@ def cmd_score(args: argparse.Namespace) -> int:
     return 0
 
 
+def _why(label: str) -> str:
+    """One line on why a URL component identifies the user, for the dry run."""
+    head = label.split(" ", 1)[0]
+    return {
+        "credential": "-> an access credential tied to your account",
+        "signature": "-> signs the request, proving it came from your session",
+        "file-id": "-> a unique id for this exact file or response",
+        "expiry": "-> when the signed link was minted",
+        "token": "-> an opaque identifier that can be traced back",
+    }.get(head, "")
+
+
+def _print_finding(f, marker: str) -> None:
+    print(f"  {marker} {f}   @ {f.location}")
+    for label, snippet in f.highlights:
+        why = _why(label)
+        print(f"      - {label}: {snippet}" + (f"  {why}" if why else ""))
+
+
 def cmd_meta(args: argparse.Namespace) -> int:
     """Stage ⓪ - provenance in the file, not the prose."""
     from .scrub.metadata_scrubber import XattrUnsupported
@@ -75,9 +94,9 @@ def cmd_meta(args: argparse.Namespace) -> int:
         return 0
 
     for f in (report.findings if args.dry_run else report.removed):
-        print(f"  {'·' if args.dry_run else '✓'} {f}")
+        _print_finding(f, "·" if args.dry_run else "✓")
     for f in report.unremovable:
-        print(f"  ! SURVIVED  {f}")
+        _print_finding(f, "! SURVIVED ")
 
     if getattr(scrubber, "renamed_to", None):
         print(f"  -> renamed to {scrubber.renamed_to}")
@@ -125,6 +144,65 @@ def cmd_facts(args: argparse.Namespace) -> int:
     return 0 if r.ok else 1
 
 
+def cmd_fix(args: argparse.Namespace) -> int:
+    """The whole workflow as one bounded loop: strip -> scrub -> score (-> rewrite).
+
+    Operates in place on the given file (like `meta` and `scrub` already do).
+    Offline unless --regenerate is passed.
+    """
+    from ._ollama import WatermarkRiskError
+    from .fix import run_fix
+    from .scrub.metadata_scrubber import XattrUnsupported
+
+    try:
+        res = run_fix(
+            args.path,
+            rename=args.rename,
+            regenerate=args.regenerate,
+            model=args.model,
+            allow_unlisted=args.allow_model,
+            threshold=args.threshold,
+            max_passes=args.max_passes,
+        )
+    except XattrUnsupported as e:
+        print(f"! {e}", file=sys.stderr)
+        return 2
+    except WatermarkRiskError as e:
+        print(f"! {e}", file=sys.stderr)
+        return 2
+
+    mode = "regenerate" if res.regenerate else "offline"
+    print(f"{args.path}: fixing ({mode})")
+    for p in res.passes:
+        bits = []
+        bits.append(f"metadata {p.meta_removed} removed" if p.meta_removed else "metadata clean")
+        bits.append("unicode scrubbed" if p.scrub_changed else "unicode clean")
+        if p.regenerated:
+            bits.append(f"rewritten (sim {p.similarity:.2f}, facts "
+                        f"{'ok' if p.facts_ok else 'FAILED'})")
+        elif p.facts_ok is False:
+            bits.append("rewrite rejected (facts flipped)")
+        bits.append(f"score {p.score:.3f}")
+        line = f"  pass {p.index}: " + ", ".join(bits)
+        if p.renamed_to:
+            line += f"\n           -> renamed to {p.renamed_to}"
+        print(line)
+
+    verdict = "converged" if res.converged else "stopped (budget or fixed point)"
+    print(f"{verdict} after {len(res.passes)} pass(es). "
+          f"final human-signature: {res.final_score:.3f}")
+    if res.residual:
+        print("\n  residual (reported, not hidden):")
+        for r in res.residual:
+            print(f"    - {r}")
+    # A low score in offline mode is expected information, not a failure: the
+    # user asked to strip and scrub, and that succeeded. Failure is metadata we
+    # could not remove, or a --regenerate run that never cleared the bar.
+    meta_left = any(r.startswith("metadata still present") for r in res.residual)
+    score_fail = res.regenerate and res.final_score < args.threshold
+    return 0 if (res.converged and not meta_left and not score_fail) else 1
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     print(
         "reweave run needs a model-backed extractor and regenerator.\n"
@@ -166,6 +244,23 @@ def main(argv: list[str] | None = None) -> int:
                     help="also run entailment (catches reworded reversal; needs Ollama)")
     pf.add_argument("--nli-model", default="gemma3:4b")
     pf.set_defaults(func=cmd_facts)
+
+    px = sub.add_parser(
+        "fix", help="run the whole workflow in a bounded loop (offline unless --regenerate)")
+    px.add_argument("path", help="file to clean, in place")
+    px.add_argument("--rename", action="store_true",
+                    help="also rename the file if it names its source")
+    px.add_argument("--regenerate", action="store_true",
+                    help="rewrite the prose to lift the score (needs Ollama; fact-gated)")
+    px.add_argument("--model", default="gemma3:4b",
+                    help="local open-weight model for regeneration (allowlisted)")
+    px.add_argument("--allow-model", action="store_true",
+                    help="accept a model not on the verified-unwatermarked allowlist")
+    px.add_argument("--threshold", type=float, default=0.70,
+                    help="human-signature target for --regenerate")
+    px.add_argument("--max-passes", type=int, default=3,
+                    help="hard cap on loop passes (default 3)")
+    px.set_defaults(func=cmd_fix)
 
     pr = sub.add_parser("run", help="full pipeline (needs model backends)")
     pr.add_argument("input", nargs="?", default="-")

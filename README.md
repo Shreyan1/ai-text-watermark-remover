@@ -19,11 +19,15 @@ reweave meta  --rename   answer.md  # strip it, and the vendor name in the filen
 reweave scrub answer.md             # strip invisible chars and homoglyphs
 reweave score answer.md             # how AI-uniform does this read?
 reweave facts before.md after.md    # did a rewrite keep the facts?
+
+reweave fix   --rename   answer.md  # all of the above, looped until the file stops changing
 ```
 
 Start with `meta --dry-run`. On a file saved from a chat UI it usually finds the
 source URL sitting in an extended attribute, untouched by anything you do to the
-text.
+text. `reweave fix` runs the whole sequence in one bounded loop; it is fully
+offline unless you add `--regenerate`, which brings in a local model to rewrite
+the prose under the fact gate.
 
 ---
 
@@ -44,6 +48,48 @@ watermark removal is unverifiable from outside, so instead of asserting it, we
 implement SynthID-Text ourselves, watermark text with *our* key, and measure
 removal against a detector we hold. That is the only honest before-and-after
 that exists.
+
+---
+
+## Runs offline, and never re-watermarks
+
+Two guarantees, both enforced by tests rather than promised in prose.
+
+**The deterministic core needs no model and no network.** Stripping metadata,
+scrubbing characters, scoring, and the default fact check all run on the standard
+library alone. `tests/test_offline.py` disables every network socket and then
+runs each of them, so a stray dependency on a hosted default fails there instead
+of in your offline session.
+
+| command | needs a model? | what it uses |
+|---|---|---|
+| `reweave meta` | no | filesystem attributes, stdlib |
+| `reweave scrub` | no | `unicodedata`, stdlib |
+| `reweave score` | no | `re`, `statistics`, stdlib |
+| `reweave facts` | no | deterministic rules (`--nli` adds the model path) |
+| `reweave fix` | no | the four above, looped (`--regenerate` adds the rewrite) |
+| `reweave facts --nli`, `fix --regenerate` | local Ollama | a local open-weight model, never hosted |
+
+**The rewrite cannot re-stamp a watermark.** Regeneration is the one stage that
+emits new text, so it is the one that could carry a fresh mark. It refuses any
+model that is not local, open-weight, and on a verified-unwatermarked allowlist
+(`gemma3`, `llama3.2`, `qwen2.5`, `mistral`, and a few more); the default is
+`gemma3:4b`. This is safe for a concrete, checkable reason: statistical text
+watermarks (SynthID-Text; the KGW green-list family) are decode-time processors
+applied by a serving stack, not weights baked into the model. The open weights
+you pull with Ollama carry none, so text generated locally starts unmarked. A
+hosted endpoint is refused outright, because it may apply SynthID and it would
+see your source text. Enforced at construction in `_ollama.assert_watermark_safe`
+and pinned by `tests/test_watermark_guard.py`. Sources: Dathathri et al.,
+"Scalable watermarking for identifying large language model outputs", Nature 634
+(2024); the `google-deepmind/synthid-text` reference implementation; Kirchenbauer
+et al., "A Watermark for Large Language Models" (2023).
+
+What this does not buy you is silence from every third-party detector. Removing a
+proactive watermark is not the same as reading as human to an arbitrary
+classifier, and no honest tool can promise the latter. That is the job of the
+substrate rewrite and the human-signature score, both measured below, not of the
+model choice.
 
 ---
 
@@ -244,20 +290,41 @@ file is not only its text, though. Save an answer from a chat UI and the
 operating system records where it came from, somewhere no editor shows you.
 
 These are **real downloads**, kept in `tests/` as fixtures: the same essay task
-given to three different assistants, saved the way anyone would save it. None of
-the three mentions its origin anywhere in the prose. All three announce it
-anyway, and macOS will show you in Finder under Get Info, "Where from":
+given to six different assistants, saved the way anyone would save it. None of
+them mentions its origin anywhere in the prose. All of them announce it anyway,
+and macOS will show you in Finder under Get Info, "Where from":
 
 | file | source URL still attached | traces found |
 |---|---|---|
 | `ChatGPT-Victoria Memorial Essay.md` | `https://chatgpt.com/` | 3 |
 | `Gemini-Victoria Memorial Essay.md` | `https://contribution.usercontent.google.com/download?c=...` | 3 |
 | `Grok-Victoria Memorial Kolkata Essay.md` | `https://grok.com/` | 3 |
+| `Deepseek-Victoria Memorial Essay.md` | `https://chat.deepseek.com/` | 3 |
+| `Qwen-Victoria Memorial Essay.md` | `https://chat.qwen.ai/` | 3 |
+| `Kimi-Victoria Memorial Essay.md` | a signed storage URL (see below) | 3 |
 
 Three traces each: the source URL, the `com.apple.quarantine` stamp naming the
-browser that downloaded it (`Arc`, with a UUID), and the filename.
+browser that downloaded it (`Arc`, with a UUID), and the filename. The vendor
+detector knows the non-Western labs too now (Kimi/Moonshot, Qwen, DeepSeek, GLM,
+Doubao), which is why Kimi and Qwen files get caught by name and not just by URL.
 
-The Gemini one is worth decoding. That `c=` parameter is base64, and inside it:
+The Kimi file is the sharpest example, and it is why `meta --dry-run` now points
+at *which parts* of a URL identify you. Its "where from" is not a homepage; it is
+a ByteDance Volcano Engine (TOS) pre-signed download URL, and inside it:
+
+```
+- file-id: 1a00a706-4b72-8ae9-8000-096e74afe606
+- credential (X-Tos-Credential): AKLTYTJlNjgwMjY2ZDBkNDFiYmI5YWNi...
+- signature (X-Tos-Signature): e2d574d13a04daae005b6b1f0ae1c24f...
+- expiry (X-Tos-Date): 20260816T120055Z
+```
+
+That is an access credential and a request signature into the vendor's object
+storage, keyed to one file, not merely "this came from Kimi". A plain homepage
+URL like Qwen's decomposes to nothing sensitive, and the report stays quiet;
+this one gets pulled apart component by component.
+
+The Gemini one is worth decoding too. That `c=` parameter is base64, and inside it:
 
 ```
 bard_storage ... response_data ... e28349d995dad45a00065927d1449194037055f63804c310
@@ -309,8 +376,10 @@ FILE -> 0 Meta -> 1 Scrub -> 2 Extract -> 3 Regenerate -> 4 Score -> 5 Gate -> O
 **Stage 3 must use a local, unwatermarked, open-weight model.** Paraphrasing
 Claude's output *with Claude* strips the old mark and stamps a fresh one, which
 is the Self-Watermark Trap. `Pipeline.__init__` refuses a regenerator not
-declared `is_unwatermarked`, and the Ollama adapter refuses any model whose name
-contains `cloud`.
+declared `is_unwatermarked`, and the Ollama adapter refuses any hosted model and
+any local model off the verified-unwatermarked allowlist (override per call with
+`allow_unlisted`, or `--allow-model` on `reweave fix`). See "Runs offline, and
+never re-watermarks" above for the allowlist and the citations behind it.
 
 Full design contract: **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 Diagrams: **[docs/diagrams.md](docs/diagrams.md)**.

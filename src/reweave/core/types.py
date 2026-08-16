@@ -184,14 +184,40 @@ class MetadataFinding:
     provenance; it has only removed the part you could see.
     """
 
-    layer: str    # "xattr" | "frontmatter" | "inline" | "docx" | "pdf"
+    layer: str    # "xattr" | "frontmatter" | "inline" | "docx" | "pdf" | "filename"
     key: str      # attribute / field name
     value: str    # what it revealed (truncated for display)
     removable: bool = True
+    #: WHERE the trace sits, so a dry run can point at it rather than just name
+    #: it. `line` is 1-based within the file (frontmatter/inline); `span` is a
+    #: (start, end) character offset within the file text. Both stay None for
+    #: layers with no meaningful position (an xattr lives outside the bytes; a
+    #: filename is the whole name).
+    line: int | None = None
+    span: tuple[int, int] | None = None
+    #: WHAT parts of the value actually identify you, decomposed. For a plain
+    #: homepage URL this is empty; for a signed storage URL it names the embedded
+    #: credential, file id, signature, and expiry, each as (label, snippet). This
+    #: is the difference between "a URL is here" and "this URL carries a live
+    #: access credential tying the file to your account".
+    highlights: tuple[tuple[str, str], ...] = ()
 
     def __str__(self) -> str:
         v = self.value if len(self.value) <= 90 else self.value[:87] + "..."
         return f"[{self.layer}] {self.key}: {v}"
+
+    @property
+    def location(self) -> str:
+        """Human-readable position, for the dry-run report."""
+        if self.line is not None:
+            return f"line {self.line}"
+        if self.span is not None:
+            return f"offset {self.span[0]}:{self.span[1]}"
+        if self.layer == "xattr":
+            return "extended attribute (not in the file bytes)"
+        if self.layer == "filename":
+            return "the filename itself"
+        return self.layer
 
 
 @dataclass(frozen=True)

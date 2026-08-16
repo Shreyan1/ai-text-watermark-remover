@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import re
 
-from .._ollama import DEFAULT_HOST, generate
+from .._ollama import DEFAULT_HOST, assert_local, generate
 from .nli import NLIBackend, NLIScores
 
 # Asking for a bare one-word answer does NOT work across model families:
@@ -108,11 +108,10 @@ class OllamaNLIBackend(NLIBackend):
         think: bool | None = False,
         high_recall: bool = False,
     ) -> None:
-        if "cloud" in model.lower():
-            raise ValueError(
-                f"refusing model {model!r}: a hosted model would receive the "
-                "user's source text for judging. Use a local open-weight model."
-            )
+        # A judge emits a label, not prose, so it cannot re-watermark anything;
+        # the allowlist is therefore not enforced here. But a hosted judge still
+        # receives the user's source text, so refuse that.
+        assert_local(model)
         self.model = model
         self.host = host
         #: high_recall appends few-shot examples: recall ~0.68 vs ~0.51, at the
