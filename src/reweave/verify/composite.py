@@ -1,4 +1,4 @@
-"""Rules first, then entailment — the checker you actually want to run.
+"""Rules first, then entailment, the checker you actually want to run.
 
 The two checkers fail in opposite directions, which is the whole reason to run
 both rather than pick one:
@@ -8,14 +8,14 @@ both rather than pick one:
   NLIChecker         catches reworded reversal. Costs a model call per claim,
                      is only as good as its backend (SummaC's best trained
                      configuration is 74.4% balanced accuracy), and cannot tell
-                     you that "40%" went missing — a dropped number is not a
+                     you that "40%" went missing, a dropped number is not a
                      contradiction, it is an omission, and NLI scores omission
                      as NEUTRAL.
 
 Order matters for cost, not just tidiness: the deterministic checker runs first
 and its findings stand on their own. NLI runs second and can only ADD findings.
 A model that is unavailable or wrong can therefore never *weaken* the guarantee
-the rules already give you — the union is monotonic in safety.
+the rules already give you, the union is monotonic in safety.
 """
 
 from __future__ import annotations

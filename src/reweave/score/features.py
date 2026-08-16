@@ -2,7 +2,7 @@
 
 The zero-dependency features (burstiness, TTR, punctuation, density) are
 implemented here and work today. Perplexity requires a reference language model
-and is optional — it stays None until a backend is wired in the `[score]` extra.
+and is optional, it stays None until a backend is wired in the `[score]` extra.
 
 AI's failure mode is uniformity; every feature here measures a dimension of
 variance that human writing has and unedited AI lacks. The set is OPEN
@@ -20,7 +20,7 @@ from ..core.types import FeatureVector
 _SENT_SPLIT = re.compile(r"[.!?]+(?:\s+|$)")
 _WORD = re.compile(r"[A-Za-z0-9']+")
 _PARA_SPLIT = re.compile(r"\n\s*\n")
-# Capitalised multi-word runs — a cheap proxy for named entities, no NLP dep.
+# Capitalised multi-word runs, a cheap proxy for named entities, no NLP dep.
 _ENTITY = re.compile(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b")
 _NUMERAL = re.compile(r"\b\d[\d,.]*\b")
 
@@ -34,7 +34,7 @@ def _words(text: str) -> list[str]:
 
 
 def _cv(values: list[float]) -> float | None:
-    """Coefficient of variation — scale-free dispersion. Higher = more human."""
+    """Coefficient of variation, scale-free dispersion. Higher = more human."""
     if len(values) < 2:
         return None
     m = mean(values)

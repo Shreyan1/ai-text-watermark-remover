@@ -6,14 +6,14 @@ harness: we watermark with keys WE hold, so we can measure before/after honestly
 
 It implements the exact quantities from Dathathri et al., Nature 634 (2024):
 
-  * g-value            g_ℓ(x, r) — a keyed Bernoulli(0.5) pseudo-random bit
-  * random seed        r_t = h(x_{t-H..t-1}, key)  — sliding-window over context
+  * g-value            g_ℓ(x, r), a keyed Bernoulli(0.5) pseudo-random bit
+  * random seed        r_t = h(x_{t-H..t-1}, key) , sliding-window over context
   * Tournament sampling  draw M=2^m candidates from p_LM, run an m-layer knockout
   * mean-score detector  Score(x) = (1/mT) Σ_t Σ_ℓ g_ℓ(x_t, r_t)
 
 Tokens here are WORDS (strings), not subword ids. That is the one deliberate
 simplification, and it buys a crucial property: the detector can score ANY text
-by tokenising it the same way — so we can watermark a passage, hand it to a real
+by tokenising it the same way, so we can watermark a passage, hand it to a real
 local model to rewrite, and measure the collapse. Real SynthID is weaker
 per-token (subword entropy, RLHF); the harness measures mechanism, not Google's
 exact operating point. See dataset/README.md.
@@ -29,7 +29,7 @@ _MASK64 = 0xFFFFFFFFFFFFFFFF
 
 
 def _prf_unit(key: bytes, *parts) -> float:
-    """Keyed pseudo-random function → uniform float in [0, 1). Deterministic.
+    """Keyed pseudo-random function -> uniform float in [0, 1). Deterministic.
     Accepts int and str parts (words are str, layer/seed are int)."""
     h = hashlib.sha256(key)
     for p in parts:
@@ -96,7 +96,7 @@ def tournament_sample(
 
 
 def mean_score(words: list[str], cfg: SynthIDConfig) -> float:
-    """The detector. Needs only the tokens, the key, and the seed rule — NOT the LM.
+    """The detector. Needs only the tokens, the key, and the seed rule, NOT the LM.
 
     Returns mean g-value in [0,1]; watermarked text trends > 0.5, human/unwatermarked
     text sits at ≈ 0.5.

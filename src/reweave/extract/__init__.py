@@ -1,4 +1,4 @@
-"""Stage ② — extractor (document → meaning)."""
+"""Stage ②, extractor (document -> meaning)."""
 
 from .outline_extractor import LocalLLMExtractor, SentenceFallbackExtractor
 from .ollama_extractor import OllamaExtractor

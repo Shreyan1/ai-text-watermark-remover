@@ -1,7 +1,7 @@
 """The orchestrator + convergence loop.
 
 STABLE CORE. This is the only place the five stages are wired together. It holds
-no watermark-scheme knowledge and no model knowledge — only the sequencing and
+no watermark-scheme knowledge and no model knowledge, only the sequencing and
 the loop rule that makes the system 'ever-evolving':
 
     optimise toward a FIXED target (statistical human-ness), never against a
@@ -83,7 +83,7 @@ class Pipeline:
         voice = voice or VoiceProfile()
         trace: list[StageTrace] = []
 
-        # ① Scrub — deterministic artifact hygiene.
+        # ① Scrub, deterministic artifact hygiene.
         scrubbed = self.scrubber.scrub(doc)
         trace.append(StageTrace("scrub", self.scrubber.name, "character/encoding hygiene"))
 
@@ -91,7 +91,7 @@ class Pipeline:
         trace.append(StageTrace("score", self.scorer.name, "baseline",
                                 {"score": before.score, "verdict": before.verdict.value}))
 
-        # If already human-like, don't touch the prose — humans stop when done.
+        # If already human-like, don't touch the prose, humans stop when done.
         if before.score >= self.config.human_threshold:
             return TransformResult(
                 original=doc, output=scrubbed, before=before, after=before,
@@ -99,7 +99,7 @@ class Pipeline:
                 trace=tuple(trace), facts=FactReport(ok=True),  # unchanged text
             )
 
-        # ② Extract — collapse to meaning once; reused across retries.
+        # ② Extract, collapse to meaning once; reused across retries.
         meaning = self.extractor.extract(scrubbed)
         trace.append(StageTrace("extract", self.extractor.name,
                                 f"{len(meaning.points)} points"))
@@ -112,7 +112,7 @@ class Pipeline:
         aggressiveness = self.config.start_aggressiveness
         i = 0
 
-        # ③–⑤ Regenerate → Score → Gate, looping toward the fixed target.
+        # ③–⑤ Regenerate -> Score -> Gate, looping toward the fixed target.
         for i in range(1, self.config.max_iterations + 1):
             candidate = self.regenerator.regenerate(meaning, voice, aggressiveness)
             sig = self.scorer.score(candidate, voice)

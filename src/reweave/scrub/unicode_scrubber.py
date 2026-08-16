@@ -1,4 +1,4 @@
-"""Stage ① — deterministic character/encoding hygiene.
+"""Stage ①, deterministic character/encoding hygiene.
 
 Pure standard-library code, zero dependencies, no model. Defeats the entire
 character-artifact watermark family (threat-model Family A) and normalises the
@@ -28,7 +28,7 @@ _ZERO_WIDTH = {
 # Bidirectional / directional controls sometimes used to hide payloads.
 _BIDI_CONTROLS = {chr(c) for c in range(0x202A, 0x202F)} | {chr(c) for c in range(0x2066, 0x206A)}
 
-# Homoglyph map: common non-Latin look-alikes → their ASCII equivalent.
+# Homoglyph map: common non-Latin look-alikes -> their ASCII equivalent.
 _HOMOGLYPHS = {
     "а": "a", "е": "e", "о": "o", "р": "p", "с": "c",
     "х": "x", "у": "y", "і": "i", "ј": "j", "һ": "h",
@@ -36,10 +36,10 @@ _HOMOGLYPHS = {
     "Μ": "M", "Ν": "N", "Ο": "O", "Ρ": "P", "Τ": "T",
     "Χ": "X", "Ѕ": "S", "І": "I", "А": "A", "В": "B",
 }
-# Quote / dash normalisation → straight ASCII.
+# Quote / dash normalisation -> straight ASCII.
 _PUNCT = {
     "‘": "'", "’": "'", "“": '"', "”": '"',
-    "–": "-", "—": "-", "―": "-",  # en/em/horizontal dash → hyphen
+    "–": "-", "—": "-", "―": "-",  # en/em/horizontal dash -> hyphen
     "…": "...", " ": " ", " ": " ", " ": " ", " ": " ",
     "−": "-",  # minus sign
 }

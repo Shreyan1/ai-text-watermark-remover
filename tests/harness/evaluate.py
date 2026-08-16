@@ -1,11 +1,11 @@
 """The harness scorecard. Two tracks:
 
-  Track A — watermark ground truth (keys we hold):
+  Track A, watermark ground truth (keys we hold):
     A1  detection: do watermarked sequences separate from unwatermarked?
     A2  removal:   does regenerating the token substrate collapse the score?
     A3  I4 proof:  full regeneration vs light in-place editing.
 
-  Track B — human vs AI, for the human-signature scorer:
+  Track B, human vs AI, for the human-signature scorer:
     real AI text (Gemma, from the dataset) vs real human text (public-domain).
 
 Run:  PYTHONPATH=src python3 tests/harness/evaluate.py
@@ -39,7 +39,7 @@ def _fmt(d: dict) -> str:
 
 def track_a(n: int = 120, length: int = 70) -> dict:
     print("\n" + "=" * 70)
-    print("TRACK A — watermark ground truth (pure-Python SynthID, keys we hold)")
+    print("TRACK A, watermark ground truth (pure-Python SynthID, keys we hold)")
     print("=" * 70)
     built = build(n=n, length=length)
     lm, cfg, corpora = built["lm"], built["cfg"], built["corpora"]
@@ -55,7 +55,7 @@ def track_a(n: int = 120, length: int = 70) -> dict:
     print("\n[A1] Detection (watermarked vs unwatermarked):")
     print("     " + _fmt(a1))
 
-    print("\n[A2] Removal — regenerate a fraction p of the token substrate:")
+    print("\n[A2] Removal, regenerate a fraction p of the token substrate:")
     rng = random.Random(101)
     curve = []
     for p in [0.0, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0]:
@@ -68,12 +68,12 @@ def track_a(n: int = 120, length: int = 70) -> dict:
         bar = "#" * max(0, int((mean_s - 0.5) / span * 40))
         print(f"     p={p:>3}  mean_wm_score={mean_s:.3f}  still-detected(TPR@1%)={tpr:.3f}  {bar}")
 
-    print("\n[A3] Invariant I4 — removal tracks the FRACTION of token identities changed:")
+    print("\n[A3] Invariant I4, removal tracks the FRACTION of token identities changed:")
     light = next(c for c in curve if c["p"] == 0.1)
     heavy = next(c for c in curve if c["p"] == 1.0)
-    print(f"     light copy-edit  (~10% of words changed): TPR@1%={light['tpr@fpr=1%']:.3f}  → watermark SURVIVES")
-    print(f"     full regeneration (~100% changed):        TPR@1%={heavy['tpr@fpr=1%']:.3f}  → watermark GONE")
-    print("     → In-place edits change few tokens, so they under-remove. Regenerating")
+    print(f"     light copy-edit  (~10% of words changed): TPR@1%={light['tpr@fpr=1%']:.3f}  -> watermark SURVIVES")
+    print(f"     full regeneration (~100% changed):        TPR@1%={heavy['tpr@fpr=1%']:.3f}  -> watermark GONE")
+    print("     -> In-place edits change few tokens, so they under-remove. Regenerating")
     print("       the whole surface changes every token. That is why I4 says regenerate,")
     print("       never edit in place.")
 
@@ -82,7 +82,7 @@ def track_a(n: int = 120, length: int = 70) -> dict:
 
 def track_b(n_ai: int = 60) -> dict:
     print("\n" + "=" * 70)
-    print("TRACK B — human-signature scorer on real human vs real AI text")
+    print("TRACK B, human-signature scorer on real human vs real AI text")
     print("=" * 70)
     scorer = StatisticalScorer()
 
@@ -115,7 +115,7 @@ def main() -> int:
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", encoding="utf-8") as fh:
         json.dump(report, fh, indent=2)
-    print(f"\nreport → {out}")
+    print(f"\nreport -> {out}")
     return 0
 
 

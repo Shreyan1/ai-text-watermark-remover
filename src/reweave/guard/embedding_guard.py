@@ -1,22 +1,22 @@
-"""The real semantic guard — cosine similarity over local sentence embeddings.
+"""The real semantic guard, cosine similarity over local sentence embeddings.
 
 This is the piece that makes the gated pipeline usable on real text. The Jaccard
 placeholder rewards *word overlap*, so it punishes exactly what a good rewrite
 does (change the words, keep the meaning). Embeddings measure meaning, so a
-faithful reword scores HIGH and a topic drift scores LOW — which is the signal
+faithful reword scores HIGH and a topic drift scores LOW, which is the signal
 the gate actually needs.
 
 Runs locally via Ollama (`all-minilm`, the all-MiniLM-L6-v2 sentence encoder,
 384-dim). No new Python dependencies: stdlib HTTP + math.
 
 Measured behaviour of the underlying encoder:
-    paraphrase, different words  → cos 0.650
-    unrelated topic              → cos -0.077
+    paraphrase, different words  -> cos 0.650
+    unrelated topic              -> cos -0.077
 
-KNOWN BLIND SPOT — negation and factual inversion (measured, tests/harness/guard_eval.py):
-    "X are computers"      vs "X are NOT computers"      → 0.959
-    "deployment succeeded" vs "deployment failed"        → 0.898
-    "revenue increased 40%" vs "revenue decreased 40%"   → 0.776
+KNOWN BLIND SPOT, negation and factual inversion (measured, tests/harness/guard_eval.py):
+    "X are computers"      vs "X are NOT computers"      -> 0.959
+    "deployment succeeded" vs "deployment failed"        -> 0.898
+    "revenue increased 40%" vs "revenue decreased 40%"   -> 0.776
 
 Sentence embeddings encode topic, not truth value, so a rewrite that INVERTS a
 claim still scores far above any usable floor. This guard therefore prevents
@@ -46,7 +46,7 @@ def _chunk(text: str, max_chars: int = 1200) -> list[str]:
     """Split into embedding-sized chunks on sentence boundaries.
 
     all-MiniLM truncates at 512 tokens, so a long document embedded whole would
-    silently lose its tail — and the guard would be comparing prefixes. Chunking
+    silently lose its tail, and the guard would be comparing prefixes. Chunking
     and mean-pooling keeps the whole document in the comparison.
     """
     sents = [s.strip() for s in _SENT.split(text) if s.strip()]
@@ -97,7 +97,7 @@ class OllamaEmbeddingGuard(SemanticGuard):
         except Exception as e:  # noqa: BLE001 - surface any transport/shape failure uniformly
             raise OllamaError(
                 f"embedding failed ({self.model}); is it pulled? "
-                f"`ollama pull {self.model}` — {e}"
+                f"`ollama pull {self.model}`, {e}"
             ) from e
 
     def embed(self, text: str) -> list[float]:
@@ -118,7 +118,7 @@ class OllamaEmbeddingGuard(SemanticGuard):
 
     def similarity(self, a: Document, b: Document) -> float:
         """Cosine similarity in 0..1. Negative cosine means unrelated, so it
-        clamps to 0 rather than being rescaled — a rewrite about a different
+        clamps to 0 rather than being rescaled, a rewrite about a different
         subject should read as 0 similarity, not 0.5."""
         if not a.text.strip() or not b.text.strip():
             return 0.0

@@ -1,12 +1,12 @@
-"""Fact preservation — the gate's second, truth-value test.
+"""Fact preservation, the gate's second, truth-value test.
 
 The semantic guard asks "same topic?"; this asks "same claims?". Embeddings
 cannot answer the second (measured: negation pairs score 0.776–0.959), so it
 gets its own contract and two complementary implementations:
 
-    ConstraintChecker  rules — numbers, names, negation (NegEx), antonyms.
+    ConstraintChecker  rules, numbers, names, negation (NegEx), antonyms.
                        Deterministic and free; blind to reworded reversal.
-    NLIChecker         entailment — catches reworded reversal.
+    NLIChecker         entailment, catches reworded reversal.
                        Costs a model call per claim; bounded by its backend.
     CompositeChecker   both. Rules first; NLI can only add findings.
 """

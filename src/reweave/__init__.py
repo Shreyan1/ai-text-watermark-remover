@@ -1,4 +1,4 @@
-"""Reweave — rebuild text from meaning into a genuine human voice.
+"""Reweave, rebuild text from meaning into a genuine human voice.
 
 Removing any embedded statistical watermark is a side effect of regeneration, not
 a targeted operation. See ARCHITECTURE.md for the contract and the invariants.

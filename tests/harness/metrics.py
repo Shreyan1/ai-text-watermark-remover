@@ -1,4 +1,4 @@
-"""Detection metrics — pure Python, no numpy.
+"""Detection metrics, pure Python, no numpy.
 
 The two the paper reports: AUROC and TPR at a fixed FPR (they use FPR=1%).
 """
@@ -32,7 +32,7 @@ def auroc(positives: list[float], negatives: list[float]) -> float:
 
 def tpr_at_fpr(positives: list[float], negatives: list[float], fpr: float = 0.01) -> float:
     """True-positive rate when the threshold is set to allow at most `fpr` false
-    positives on the negatives — the paper's headline TPR@FPR=1%."""
+    positives on the negatives, the paper's headline TPR@FPR=1%."""
     if not positives or not negatives:
         return float("nan")
     neg_sorted = sorted(negatives, reverse=True)

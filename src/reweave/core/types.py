@@ -1,8 +1,8 @@
-"""Data contracts — the spine of the pipeline.
+"""Data contracts, the spine of the pipeline.
 
 STABLE CORE. No third-party dependencies, no watermark-scheme code. Every type
 here is immutable; the pipeline threads them stage to stage. If a stage needs a
-new field, extend the type here — never smuggle stage-specific state through
+new field, extend the type here, never smuggle stage-specific state through
 `meta` dicts as a shortcut, because that erodes the contract (Invariant I3).
 """
 
@@ -50,14 +50,14 @@ class Point:
 
 @dataclass(frozen=True)
 class Meaning:
-    """The pivot representation. Regenerating from this — rather than editing the
-    original surface — is what severs the watermark substrate (Invariant I4).
+    """The pivot representation. Regenerating from this, rather than editing the
+    original surface, is what severs the watermark substrate (Invariant I4).
 
     Deliberately loose so extractors can evolve without a contract change.
     """
 
     points: tuple[Point, ...]
-    order: str = "as-given"  # "as-given" | "logical" | "free" — how strictly to preserve sequence
+    order: str = "as-given"  # "as-given" | "logical" | "free", how strictly to preserve sequence
     register: str = "neutral"  # detected register hint for the regenerator
     meta: Mapping[str, Any] = field(default_factory=dict)
 
@@ -99,7 +99,7 @@ class Constraints:
 
     This is the half of meaning that embeddings cannot see. Sentence embeddings
     encode *topic*, so "revenue increased 40%" and "revenue decreased 40%" sit
-    0.776 apart — same topic, opposite truth. Constraints capture the truth part:
+    0.776 apart, same topic, opposite truth. Constraints capture the truth part:
     the numbers, the names, and the polarity of each claim.
 
     Deliberately surface-derived and zero-dependency: unlike the meaning pivot,
@@ -109,7 +109,7 @@ class Constraints:
 
     numerals: frozenset[str] = frozenset()  # normalised numeric values ("40", "1000")
     entities: frozenset[str] = frozenset()  # proper nouns, lowercased for matching
-    #: (content-word key, is_negated) per claim — the polarity fingerprint.
+    #: (content-word key, is_negated) per claim, the polarity fingerprint.
     claims: tuple[tuple[frozenset[str], bool], ...] = ()
 
     def __bool__(self) -> bool:
@@ -150,7 +150,7 @@ class FactReport:
 class VoiceProfile:
     """The target to regenerate INTO. The regenerator is steered by this; the
     scorer's weights may be derived from it. Sample texts are the strongest
-    signal — the user's actual writing."""
+    signal, the user's actual writing."""
 
     contractions: bool = True
     target_burstiness: float | None = None  # None = "as human as possible"
@@ -165,6 +165,58 @@ DEFAULT_BANNED_TERMS: frozenset[str] = frozenset({
     "seamless", "landscape", "navigate", "unlock", "testament", "realm",
     "underscore", "elevate", "boasts", "furthermore", "moreover",
 })
+
+
+@dataclass(frozen=True)
+class MetadataFinding:
+    """One provenance trace found outside the prose.
+
+    Text scrubbing is not enough. A markdown file saved from a chat UI carries
+    its origin in the *filesystem*: on macOS, `kMDItemWhereFroms` holds the exact
+    source URL and `com.apple.quarantine` names the downloading app. Neither is
+    visible in an editor, neither is touched by rewriting a single word, and both
+    survive every stage of this pipeline. Verified on a real download here:
+
+        com.apple.metadata:kMDItemWhereFroms -> https://www.nature.com/...
+        com.apple.quarantine                 -> 0083;6a7aef14;Preview;
+
+    A pipeline that rewrites the text and leaves that in place has not removed
+    provenance; it has only removed the part you could see.
+    """
+
+    layer: str    # "xattr" | "frontmatter" | "inline" | "docx" | "pdf"
+    key: str      # attribute / field name
+    value: str    # what it revealed (truncated for display)
+    removable: bool = True
+
+    def __str__(self) -> str:
+        v = self.value if len(self.value) <= 90 else self.value[:87] + "..."
+        return f"[{self.layer}] {self.key}: {v}"
+
+
+@dataclass(frozen=True)
+class MetadataReport:
+    """What provenance a file carries, and what was removed."""
+
+    path: str
+    findings: tuple[MetadataFinding, ...] = ()
+    removed: tuple[MetadataFinding, ...] = ()
+    #: Traces we can see but cannot strip without rewriting the file format.
+    unremovable: tuple[MetadataFinding, ...] = ()
+
+    @property
+    def clean(self) -> bool:
+        return not self.findings
+
+    def summary(self) -> str:
+        if self.clean:
+            return "no provenance metadata found"
+        parts = [f"{len(self.findings)} trace(s)"]
+        if self.removed:
+            parts.append(f"{len(self.removed)} removed")
+        if self.unremovable:
+            parts.append(f"{len(self.unremovable)} NOT removable")
+        return ", ".join(parts)
 
 
 @dataclass(frozen=True)

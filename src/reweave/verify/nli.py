@@ -1,4 +1,4 @@
-"""The NLI backend contract — one call, three probabilities.
+"""The NLI backend contract, one call, three probabilities.
 
 Kept deliberately small so the *method* (SummaC-style aggregation, in
 nli_checker.py) is independent of what computes the labels. Two backends ship:

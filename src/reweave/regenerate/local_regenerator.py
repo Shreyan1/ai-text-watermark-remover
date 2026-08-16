@@ -1,4 +1,4 @@
-"""Stage ③ — Regenerator adapters.
+"""Stage ③, Regenerator adapters.
 
 Rebuild prose from Meaning, steered by VoiceProfile toward high burstiness, high
 perplexity, the author's vocabulary. This is the stage that produces the fresh,
@@ -26,7 +26,7 @@ class EchoStubRegenerator(Regenerator):
     """Wiring-only stub. Concatenates point intents; does NOT remove watermarks.
 
     Declared unwatermarked purely so the pipeline runs in tests. Never use for
-    real removal — it performs no regeneration.
+    real removal, it performs no regeneration.
     """
 
     name = "echo-stub"

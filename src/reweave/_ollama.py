@@ -1,4 +1,4 @@
-"""Minimal Ollama HTTP client — stdlib only, no `ollama` package needed.
+"""Minimal Ollama HTTP client, stdlib only, no `ollama` package needed.
 
 Kept private (`_ollama`) because it is an edge detail: a local model runtime the
 adapters happen to use. The core never imports it.

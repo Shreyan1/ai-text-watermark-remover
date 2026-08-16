@@ -1,4 +1,4 @@
-"""Stage ② — Extractor adapters.
+"""Stage ②, Extractor adapters.
 
 Reduce a document to its Meaning (ordered Points), discarding surface form. This
 severing of the token sequence is what breaks the watermark substrate
@@ -25,7 +25,7 @@ class SentenceFallbackExtractor(Extractor):
     """Dependency-free placeholder: one Point per sentence.
 
     Good enough to exercise the pipeline end to end in tests, but it does NOT
-    truly abstract meaning from form — a proper LLM extractor is required for
+    truly abstract meaning from form, a proper LLM extractor is required for
     real watermark removal, because keeping sentence-level surface intact keeps
     too much of the original token sequence. Use only for wiring/tests.
     """

@@ -1,4 +1,4 @@
-"""Semantic guard — the meaning-preservation floor.
+"""Semantic guard, the meaning-preservation floor.
 
 Removal that garbles content is a failure, not a success (Invariant I5). The gate
 rejects any regeneration whose similarity to the source falls below the floor.
@@ -26,7 +26,7 @@ def _content_tokens(text: str) -> set[str]:
 
 @register(KIND_GUARD, "jaccard-fallback")
 class JaccardGuard(SemanticGuard):
-    """Lexical Jaccard overlap. A crude proxy — it rewards surface overlap, which
+    """Lexical Jaccard overlap. A crude proxy, it rewards surface overlap, which
     is exactly the wrong bias for a system whose job is to change the surface: a
     faithful reword scores LOW and gets rejected. Kept only as a zero-dependency
     fallback. Prefer OllamaEmbeddingGuard on real text."""

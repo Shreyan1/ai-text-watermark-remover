@@ -52,7 +52,7 @@ CASES = [
 
 
 # Logical inversions: same topic, opposite truth value. A guard that scores these
-# HIGH cannot protect facts — only topic.
+# HIGH cannot protect facts, only topic.
 INVERSIONS = [
     ("Xbox and PlayStation are computers.", "Xbox and PlayStation are not computers."),
     ("The deployment succeeded and no data was lost.",
@@ -68,8 +68,8 @@ def blind_spot(guard) -> None:
         s = guard.similarity(Document(text=a), Document(text=b))
         scores.append(s)
         print(f"  {s:.3f}   \"{a[:46]}\" vs inverted")
-    print(f"  ── mean={sum(scores)/len(scores):.3f} — well above any usable floor.")
-    print("     → the guard prevents TOPIC DRIFT, not FACT CORRUPTION. Protecting")
+    print(f"  ── mean={sum(scores)/len(scores):.3f}, well above any usable floor.")
+    print("     -> the guard prevents TOPIC DRIFT, not FACT CORRUPTION. Protecting")
     print("       facts needs entailment/NLI or Point.constraints verification.")
 
 
@@ -78,7 +78,7 @@ def main() -> int:
               ("Embedding (meaning)", OllamaEmbeddingGuard())]
 
     print("=" * 74)
-    print("GUARD EVAL — can the guard tell 'same meaning' from 'different meaning'?")
+    print("GUARD EVAL, can the guard tell 'same meaning' from 'different meaning'?")
     print("=" * 74)
 
     for label, guard in guards:
@@ -96,12 +96,12 @@ def main() -> int:
         margin = mr - mo
         print(f"  ── mean: reword={mr:.3f}  other={mo:.3f}  MARGIN={margin:+.3f}")
         if mr < 0.5:
-            print("     ✗ rejects faithful rewords — unusable as a gate")
+            print("     ✗ rejects faithful rewords, unusable as a gate")
         elif margin < 0.25:
             print("     ✗ margin too small to place a floor between them")
         else:
             floor = (mr + mo) / 2
-            print(f"     ✓ usable — a floor near {floor:.2f} separates them cleanly")
+            print(f"     ✓ usable, a floor near {floor:.2f} separates them cleanly")
 
     blind_spot(guards[-1][1])
     return 0

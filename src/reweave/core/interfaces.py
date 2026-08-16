@@ -12,7 +12,15 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from .types import Constraints, Document, FactReport, HumanSignature, Meaning, VoiceProfile
+from .types import (
+    Constraints,
+    Document,
+    FactReport,
+    HumanSignature,
+    Meaning,
+    MetadataReport,
+    VoiceProfile,
+)
 
 
 class Scrubber(ABC):
@@ -23,6 +31,33 @@ class Scrubber(ABC):
 
     @abstractmethod
     def scrub(self, doc: Document) -> Document:
+        ...
+
+
+class MetadataScrubber(ABC):
+    """Stage ⓪. Provenance that lives OUTSIDE the prose.
+
+    Stage ① cleans characters inside the text. This cleans everything wrapped
+    around it: filesystem extended attributes, container metadata (DOCX, PDF),
+    YAML front matter, and generator comments. These survive regeneration
+    completely, you can rewrite every word and the file still says where it
+    came from, so they need their own pass.
+
+    Separate from `Scrubber` because it works on PATHS, not `Document`. A
+    Document has already lost the file it came from, and that file is exactly
+    where this metadata lives.
+    """
+
+    name: str = "metadata"
+
+    @abstractmethod
+    def inspect(self, path: str) -> MetadataReport:
+        """Report provenance traces without modifying anything."""
+        ...
+
+    @abstractmethod
+    def scrub_file(self, path: str) -> MetadataReport:
+        """Remove what can be removed; report what cannot."""
         ...
 
 
@@ -90,7 +125,7 @@ class SemanticGuard(ABC):
 
 
 class FactChecker(ABC):
-    """The gate's second, orthogonal test — did the facts survive?
+    """The gate's second, orthogonal test, did the facts survive?
 
     A `SemanticGuard` measures topic distance and is blind to truth value: the
     harness measured "X are computers" vs "X are NOT computers" at 0.959

@@ -1,4 +1,4 @@
-"""A tiny word-level bigram language model — the p_LM that Tournament sampling
+"""A tiny word-level bigram language model, the p_LM that Tournament sampling
 draws candidates from. Zero dependencies.
 
 Built from real English (the unwatermarked Gemma responses in the dataset) so the
@@ -64,7 +64,7 @@ class WordLM:
         if succ:
             for tok, cnt in succ.most_common(self.top_k):
                 support[tok] = float(cnt)
-        # Unigram backoff — guarantees candidates even for unseen/edge contexts.
+        # Unigram backoff, guarantees candidates even for unseen/edge contexts.
         for tok, w in zip(self._uni_ids[: self.top_k], self._uni_wts[: self.top_k]):
             support[tok] = support.get(tok, 0.0) + self.smoothing * w * 100.0
         ids = list(support.keys())

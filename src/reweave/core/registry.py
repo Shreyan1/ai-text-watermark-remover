@@ -1,4 +1,4 @@
-"""Plugin registry — how the swappable edge plugs into the stable core.
+"""Plugin registry, how the swappable edge plugs into the stable core.
 
 STABLE CORE. Adapters register themselves by (kind, name); the pipeline resolves
 them by name from config. This is the mechanism that makes adopting a future
@@ -24,10 +24,11 @@ KIND_REGENERATOR = "regenerator"
 KIND_SCORER = "scorer"
 KIND_GUARD = "guard"
 KIND_FACTCHECKER = "factchecker"
+KIND_METADATA = "metadata"
 
 _VALID_KINDS = frozenset({
     KIND_SCRUBBER, KIND_EXTRACTOR, KIND_REGENERATOR, KIND_SCORER, KIND_GUARD,
-    KIND_FACTCHECKER,
+    KIND_FACTCHECKER, KIND_METADATA,
 })
 
 _REGISTRY: Dict[Tuple[str, str], Type] = {}

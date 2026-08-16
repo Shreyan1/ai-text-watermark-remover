@@ -2,12 +2,12 @@
 
 Why this file exists: `nli_eval.py` scores 8/8 on a gap set we wrote ourselves,
 and that number is worth very little. A hand-written set measures whether the
-mechanism fires, not whether the model is right — and it is trivially
+mechanism fires, not whether the model is right, and it is trivially
 overfittable, because the author of the examples is the author of the system.
 The counterexample that forced this file: gemma3:4b correctly labels
 
     "The migration finished ahead of schedule."
-    "The migration overran its deadline by several weeks."   → CONTRADICTION
+    "The migration overran its deadline by several weeks."   -> CONTRADICTION
 
 but on a barely-rephrased version of the same claim
 
@@ -17,11 +17,11 @@ but on a barely-rephrased version of the same claim
 it answers ENTAILMENT. Same meaning, different words, opposite verdict. One
 curated set cannot see that; a real benchmark can.
 
-DATA — SNLI validation split (Bowman et al., EMNLP 2015), fetched from the public
+DATA, SNLI validation split (Bowman et al., EMNLP 2015), fetched from the public
 HuggingFace datasets-server. Human-annotated, 3-class, and NOT written by us.
 Rows labelled -1 (no annotator consensus) are dropped, as the dataset intends.
 
-REPORTED — overall 3-class accuracy, plus precision/recall/F1 for the
+REPORTED, overall 3-class accuracy, plus precision/recall/F1 for the
 CONTRADICTION class specifically, because that is the only class the fact gate
 acts on. A backend with good overall accuracy but poor contradiction recall would
 be useless here, and an average would hide it.
@@ -83,7 +83,7 @@ def main() -> int:
     rows = fetch(n)
     backend = OllamaNLIBackend(model=model)
 
-    print(f"\nNLI BACKEND BENCHMARK — SNLI validation, n={len(rows)}, model={model}")
+    print(f"\nNLI BACKEND BENCHMARK, SNLI validation, n={len(rows)}, model={model}")
     print("=" * 74)
 
     tp = fp = fn = correct = 0
@@ -101,7 +101,7 @@ def main() -> int:
         elif gold == "contradiction" and pred != "contradiction":
             fn += 1
         if i % 25 == 0:
-            print(f"  … {i}/{len(rows)}  running acc={correct / i:.3f}")
+            print(f"  ... {i}/{len(rows)}  running acc={correct / i:.3f}")
 
     elapsed = time.time() - t0
     acc = correct / len(rows)
@@ -116,7 +116,7 @@ def main() -> int:
     print(f"  unparseable replies    : {backend.parse_failures}/{backend.calls}")
     print(f"  cost                   : {elapsed:.1f}s total, {elapsed / len(rows):.2f}s/pair")
 
-    print("\n  confusion (gold → predicted):")
+    print("\n  confusion (gold -> predicted):")
     print(f"    {'':>14} " + " ".join(f"{p[:5]:>7}" for p in LABELS))
     for g in LABELS:
         cells = " ".join(f"{confusion.get((g, p), 0):>7}" for p in LABELS)

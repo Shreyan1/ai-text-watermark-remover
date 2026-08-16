@@ -1,4 +1,4 @@
-"""Does NLI close the lexical gap — and what does it cost in false alarms?
+"""Does NLI close the lexical gap, and what does it cost in false alarms?
 
 The rule checker catches negation and listed antonyms. This measures the case it
 provably cannot see: a reversal written in entirely different words, with no
@@ -7,9 +7,9 @@ not worth a model call per claim.
 
 Three checkers, three question sets, so the trade is visible rather than asserted:
 
-  LEXICAL      inversions the rules already catch  — NLI must not regress
+  LEXICAL      inversions the rules already catch , NLI must not regress
   REWORDED     the gap: same topic, opposite claim, no shared cue
-  FAITHFUL     honest rewrites — the false-alarm test that decides usability
+  FAITHFUL     honest rewrites, the false-alarm test that decides usability
 
 Run:
     PYTHONPATH=src python3 tests/harness/nli_eval.py            # rules only
@@ -71,7 +71,7 @@ FAITHFUL = [
     ("The migration finished ahead of schedule.",
      "We wrapped the migration up early."),
     ("The API is stable and safe to build on.",
-     "You can build on the API — it's solid."),
+     "You can build on the API, it's solid."),
     ("Every region stayed online during the incident.",
      "All regions remained available while the incident was ongoing."),
     ("The method requires the model owner's secret key.",
@@ -109,7 +109,7 @@ def main() -> int:
         backend = OllamaNLIBackend(model=model)
         # Lexical alignment CANNOT be used here and the gap set proves why: for
         # "migration finished ahead of schedule" vs "migration overran its
-        # deadline", content-word cosine is 0.22 — below any sane floor — so the
+        # deadline", content-word cosine is 0.22, below any sane floor, so the
         # pair never reaches the NLI model at all. Embeddings align on topic,
         # which is their strength and exactly what they are blind-to-polarity
         # good for. Each instrument used where it is strong.
@@ -137,7 +137,7 @@ def main() -> int:
     print("-" * 78)
     if use_nli:
         print("  NOTE: rows after the first NLI row reuse its (premise,hypothesis)")
-        print("        cache, so their times are cache hits — not their real cost.")
+        print("        cache, so their times are cache hits, not their real cost.")
         print(f"        Real cost: {backend.calls} model calls, "
               f"{backend.parse_failures} unparseable.")
     for label, ms in misses.items():

@@ -1,23 +1,23 @@
-"""Deterministic constraint extraction — the facts a rewrite must not lose.
+"""Deterministic constraint extraction, the facts a rewrite must not lose.
 
 Shared by the extractor (which attaches constraints to Meaning so the
 regenerator is *told* what to keep) and the checker (which verifies they
-survived). One implementation, both directions — populate and verify can never
+survived). One implementation, both directions, populate and verify can never
 drift apart.
 
 Zero dependencies, all regex and set logic. That is deliberate: unlike style or
 meaning, facts are the one thing a rule can actually pin down, and a check that
 cannot fail silently is worth more than a cleverer one that can.
 
-Grounding — the rules here follow published prior art rather than intuition:
+Grounding, the rules here follow published prior art rather than intuition:
 
   * Negation detection follows NegEx (Chapman, Bridewell, Hanbury, Cooper &
     Buchanan, "A Simple Algorithm for Identifying Negated Findings and Diseases
     in Discharge Summaries", J. Biomedical Informatics 34(5), 2001), including
     its pseudo-negation-takes-precedence rule and the general-language subset of
     its published trigger lexicon (github.com/chapmanbe/negex).
-  * The reason this check has to exist at all — that embedding similarity is
-    blind to negation and antonymy — is a documented property of distributional
+  * The reason this check has to exist at all, that embedding similarity is
+    blind to negation and antonymy, is a documented property of distributional
     representations, not a quirk of our chosen model. See "This is not correct!
     Negation-aware Evaluation of Language Generation Systems" (arXiv:2307.13989)
     and "Learning Robust Negation Text Representations" (arXiv:2507.12782).
@@ -44,8 +44,8 @@ _PROPER = re.compile(r"\b(?:[A-Z][a-z’']+|[A-Z]{2,}|[A-Z][a-z]+[A-Z]\w*)\b")
 # Modelled on NegEx (Chapman et al. 2001), the standard rule-based negation
 # detector, rather than invented from scratch. NegEx splits its lexicon into
 # pre-negation triggers (PREN), post-negation triggers (POST) and *pseudo*-
-# negation triggers (PSEU) — phrases that contain a negation word but do not
-# negate anything — and applies the rule that PSEU takes PRECEDENCE over PREN.
+# negation triggers (PSEU), phrases that contain a negation word but do not
+# negate anything, and applies the rule that PSEU takes PRECEDENCE over PREN.
 # That precedence rule is the important part and is what we implement.
 #   Trigger lexicon: github.com/chapmanbe/negex (negex_triggers.txt)
 
@@ -73,7 +73,7 @@ _NEGATOR_PHRASES: tuple[tuple[str, ...], ...] = (
 #: because they do not negate the clinical *concept*; for claim-polarity
 #: comparison they are exactly the inversions we want to catch, so they stay
 #: negations here. The scalar-additive family generalises from NegEx's "not only"
-#: — same construction, and it ADDS to a claim rather than denying it.
+#:, same construction, and it ADDS to a claim rather than denying it.
 #:
 #: This was the single biggest false-positive source measured on real model
 #: output: the 1B rewrote "the order takes into account letter names" into "the
@@ -90,7 +90,7 @@ _PSEUDO_NEGATION: tuple[tuple[str, ...], ...] = (
 )
 
 #: Opposing pairs that flip a claim while keeping every content word and the
-#: topic intact — exactly the failure embeddings cannot see. Each entry is a
+#: topic intact, exactly the failure embeddings cannot see. Each entry is a
 #: pair of mutually exclusive polarity groups.
 #:
 #: Antonymy is not an afterthought to negation, it is the same blind spot: the
@@ -100,7 +100,7 @@ _PSEUDO_NEGATION: tuple[tuple[str, ...], ...] = (
 #: phenomena such as antonymy" (Learning Robust Negation Text Representations,
 #: arXiv:2507.12782). Hence both halves of the polarity check.
 #:
-#: This is a curated list, not a lexicon — WordNet antonym pairs would be the
+#: This is a curated list, not a lexicon, WordNet antonym pairs would be the
 #: principled source, at the cost of the zero-dependency guarantee. Covers the
 #: common quantitative and outcome flips; see the honest-limits note in
 #: constraint_checker.ConstraintChecker.
@@ -179,7 +179,7 @@ _MD_LEAD = re.compile(r"^\s*(?:[-*+•>]\s+|#{1,6}\s+|\d+[.)]\s+)")
 
 
 def _demarkup(line: str) -> str:
-    """Inline markers first, THEN leading ones — `**1. Habitat loss:**` only
+    """Inline markers first, THEN leading ones, `**1. Habitat loss:**` only
     reveals its list ordinal once the bold markers are gone. Getting this order
     wrong makes enumeration numbering look like facts, and a rewrite that drops
     the numbering then reads as fact loss.
@@ -191,7 +191,7 @@ def _demarkup(line: str) -> str:
 
 
 def normalised(text: str) -> str:
-    """Text with markup removed — the single surface every extractor reads, so
+    """Text with markup removed, the single surface every extractor reads, so
     numerals, entities and claims can never disagree about what the text says."""
     return "\n".join(s for s in (_demarkup(l) for l in text.split("\n")) if s)
 
@@ -223,7 +223,7 @@ def numerals(text: str) -> set[str]:
 def _is_heading(sent: str) -> bool:
     """Title-case fragment rather than a sentence. LLM output is full of these
     ("Game Engine", "Key Considerations"), and every word after the first looks
-    like a proper noun to a capitalisation rule — which is how common nouns end
+    like a proper noun to a capitalisation rule, which is how common nouns end
     up in the must-keep set and get a faithful rewrite rejected."""
     words = _WORD.findall(sent)
     if not words or len(words) > 8 or sent.rstrip().endswith((".", "!", "?")):
@@ -234,7 +234,7 @@ def _is_heading(sent: str) -> bool:
 
 def entities(text: str) -> set[str]:
     """Proper nouns, lowercased. A capital only counts as a name if it appears
-    capitalised somewhere it *had* to be a choice — i.e. mid-sentence, in a real
+    capitalised somewhere it *had* to be a choice, i.e. mid-sentence, in a real
     sentence. Sentence openers and title-case headings need corroboration. That
     is the cheap way to tell "Microsoft" from "Hardware" with no POS tagger."""
     mid: set[str] = set()
@@ -271,7 +271,7 @@ def _matches_at(toks: list[str], i: int, phrase: tuple[str, ...]) -> bool:
 
 def _is_negated(words: list[str]) -> bool:
     """NegEx-style: mask pseudo-negation spans FIRST, then look for triggers in
-    what survives. The precedence ordering is the whole point — 'not only' must
+    what survives. The precedence ordering is the whole point, 'not only' must
     consume its 'not' before the negation pass ever sees it."""
     toks = [w.replace("’", "'").replace("'", "").lower() for w in words]
     masked = [False] * len(toks)
@@ -293,7 +293,7 @@ def _is_negated(words: list[str]) -> bool:
 
 
 def claim_key(sentence: str) -> frozenset[str]:
-    """Content words of a claim — what we align two sentences on. Negators and
+    """Content words of a claim, what we align two sentences on. Negators and
     antonym members are excluded so a flipped claim still aligns with its
     source (otherwise the inversion would look like an unrelated sentence and
     escape as 'dropped' rather than 'inverted')."""

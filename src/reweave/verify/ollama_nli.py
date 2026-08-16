@@ -1,4 +1,4 @@
-"""NLI via a local instruct model — the backend that works with what's installed.
+"""NLI via a local instruct model, the backend that works with what's installed.
 
 This is an LLM prompted to emit one of three labels, NOT a trained NLI
 cross-encoder. That distinction is worth stating plainly because it changes what
@@ -8,11 +8,11 @@ the numbers mean:
     over the three classes. You can threshold it.
   * An instruct model returns a hard label. Confidence has to come from
     self-consistency (sample k times, count votes), which is what `votes > 1`
-    does here — at k× the cost.
+    does here, at k× the cost.
 
 Why it is still the right default: it needs no torch, no transformers, no model
 download beyond an Ollama pull, and it keeps the zero-dependency promise of the
-core intact (I3 — the heavy option lives behind the `[verify]` extra). And for
+core intact (I3, the heavy option lives behind the `[verify]` extra). And for
 short claim pairs, which is all this checker ever asks about, a modern instruct
 model is a genuinely strong zero-shot NLI classifier.
 
@@ -32,8 +32,8 @@ from .nli import NLIBackend, NLIScores
 
 # Asking for a bare one-word answer does NOT work across model families:
 # reasoning models (qwen3, deepseek-r1) are trained to think first and will spend
-# the whole budget doing so. Rather than fight that — reasoning genuinely helps
-# NLI accuracy — we let the model reason and require a DELIMITED final answer.
+# the whole budget doing so. Rather than fight that, reasoning genuinely helps
+# NLI accuracy, we let the model reason and require a DELIMITED final answer.
 # One protocol, works for both families, and the delimiter makes parsing exact
 # instead of hunting for a label inside prose that names all three.
 _SYSTEM = (
@@ -45,7 +45,7 @@ _SYSTEM = (
     "conflict\n\n"
     "Judge only whether both can be true at once. Different wording with the "
     "same meaning is ENTAILMENT. Wording that reverses the direction, outcome, "
-    "or polarity of a claim is CONTRADICTION — even with no negation word.\n\n"
+    "or polarity of a claim is CONTRADICTION, even with no negation word.\n\n"
     "Think briefly if you need to, then end your reply with exactly:\n"
     "ANSWER: <ENTAILMENT|CONTRADICTION|NEUTRAL>"
 )
@@ -111,7 +111,7 @@ class OllamaNLIBackend(NLIBackend):
         # enough that it cannot be reasoning that merely names the classes.
         low = raw.strip().lower()
         if len(low) <= 40:
-            for label in _LABELS:  # contradiction first — it contains no other label
+            for label in _LABELS:  # contradiction first, it contains no other label
                 if label in low:
                     return label
         self.parse_failures += 1
@@ -128,7 +128,7 @@ class OllamaNLIBackend(NLIBackend):
         else:
             tally = {lab: 0 for lab in _LABELS}
             for i in range(self.votes):
-                # First vote greedy, the rest sampled — otherwise every vote is
+                # First vote greedy, the rest sampled, otherwise every vote is
                 # identical and self-consistency measures nothing.
                 tally[self._ask(premise, hypothesis, 0.0 if i == 0 else 0.7)] += 1
             n = float(self.votes)

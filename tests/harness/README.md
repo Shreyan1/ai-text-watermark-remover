@@ -2,7 +2,7 @@
 
 The only way to measure removal of a *keyed* watermark honestly is to hold the
 key yourself. This harness builds that ground truth with a pure-Python SynthID
-reference — no ML dependencies. Measured results: **[../../RESULTS.md](../../RESULTS.md)**.
+reference, no ML dependencies. Measured results: **[../../RESULTS.md](../../RESULTS.md)**.
 
 ## Files
 
@@ -30,12 +30,12 @@ You cannot verify that a real Claude/Gemini watermark is gone without the issuer
 secret key. So we watermark with **our** key using `synthid_ref.py`, then measure
 the mean-score before and after regeneration. That before/after is the honest
 signal. Everything involving third-party (Google) text can only report
-human-signature and meaning preservation — never keyed-watermark removal.
+human-signature and meaning preservation, never keyed-watermark removal.
 
 ## Deliberate simplifications (and why they're honest)
 
 - **Word-level tokens**, not subword. Buys the ability to score arbitrary text.
-  Makes the signal *cleaner* than production, not weaker — we measure mechanism.
+  Makes the signal *cleaner* than production, not weaker; we measure mechanism.
 - **Modest tournament depth** (`m=6`, production ≈30). Keeps `2^m` candidate
   sampling tractable; the mechanism and its removal are identical in shape.
 - **Bigram `p_LM`.** Enough entropy to embed a watermark; the removal result does

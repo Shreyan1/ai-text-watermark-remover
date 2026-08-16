@@ -1,0 +1,9 @@
+# Victoria Memorial of Kolkata
+
+The Victoria Memorial stands as one of Kolkata’s most iconic landmarks, a magnificent white marble structure that dominates the city’s central Maidan. Built between 1906 and 1921 during the British Raj, it was conceived as a grand tribute to Queen Victoria, who had served as Empress of India from 1876 until her death in 1901. The idea originated with Lord Curzon, the then Viceroy of India, who envisioned not merely a monument but a lasting institution that would serve as both a memorial and a museum of Indo-British history.
+
+Designed by British architect William Emerson, with assistance from Vincent Esch, the building exemplifies the Indo-Saracenic style. It blends elements of British classical architecture with Mughal, Venetian, and other Indian influences. Constructed from the same Makrana marble used for the Taj Mahal, the structure measures approximately 103 metres by 69 metres and rises to a height of about 56 metres. Its central dome, corner chhatris, high portals, and elegant colonnades create a harmonious and imposing presence.
+
+The surrounding gardens, spanning nearly 64 acres, enhance the monument’s grandeur and provide a serene green space in the heart of the city. Funded largely through voluntary contributions from Indian princes and the public, the memorial was formally opened to the public in December 1921 by the Prince of Wales, later King Edward VIII.
+
+Today, the Victoria Memorial functions as a museum under the Ministry of Culture, Government of India. Its galleries house a rich collection of paintings, sculptures, manuscripts, and artefacts that document centuries of India’s history, particularly the colonial period. Beyond its colonial origins, the memorial has become a cherished symbol of Kolkata itself—an architectural masterpiece that continues to attract millions of visitors each year and remains an enduring part of the city’s cultural identity.

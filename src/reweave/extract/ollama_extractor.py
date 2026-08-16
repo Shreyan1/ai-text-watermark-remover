@@ -1,8 +1,8 @@
-"""Stage ② — the real extractor, over a LOCAL model via Ollama.
+"""Stage ②, the real extractor, over a LOCAL model via Ollama.
 
 Reduce a document to its Meaning (atomic points), discarding surface form. This
 severing of the token sequence is what breaks the watermark substrate (I4). We
-keep the extraction faithful — every fact, name, number preserved — because the
+keep the extraction faithful, every fact, name, number preserved, because the
 guard stage will reject regenerations that drift too far.
 """
 

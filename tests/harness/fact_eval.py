@@ -3,7 +3,7 @@
 Two things have to be true for this to be worth having:
 
   1. It CATCHES the inversions the embedding guard waves through (recall).
-  2. It does NOT reject faithful rewordings (precision) — a fact gate that
+  2. It does NOT reject faithful rewordings (precision), a fact gate that
      fires on every legitimate rewrite would shut the pipeline down exactly
      the way JaccardGuard did, just for a different reason.
 
@@ -75,7 +75,7 @@ def live_rejection_rate(n: int = 8) -> None:
     There are no ground-truth fidelity labels here, so this is deliberately NOT
     reported as precision. It is the rejection rate plus the reason for each
     rejection, so the reasons can be read and judged. A gate that rejects
-    everything is as useless as one that rejects nothing — this is the number
+    everything is as useless as one that rejects nothing, this is the number
     that tells you which one you built.
     """
     import json
@@ -88,7 +88,7 @@ def live_rejection_rate(n: int = 8) -> None:
     from reweave.core.types import VoiceProfile
 
     if not is_up():
-        print("\n[4] LIVE REGENERATIONS — skipped (Ollama not reachable)")
+        print("\n[4] LIVE REGENERATIONS, skipped (Ollama not reachable)")
         return
 
     model = os.environ.get("REWEAVE_MODEL", "llama3.2:1b")
@@ -103,7 +103,7 @@ def live_rejection_rate(n: int = 8) -> None:
     scrub, ext, reg = UnicodeScrubber(), OllamaExtractor(model=model), OllamaRegenerator(model=model)
     checker = ConstraintChecker()
 
-    print(f"\n[4] LIVE REGENERATIONS — {model} rewriting {n} real Gemma responses")
+    print(f"\n[4] LIVE REGENERATIONS, {model} rewriting {n} real Gemma responses")
     rejected = 0
     for i, text in enumerate(docs, 1):
         src = scrub.scrub(Document(text=text))
@@ -116,7 +116,7 @@ def live_rejection_rate(n: int = 8) -> None:
         for s, c in r.inversions[:1]:
             print(f"          src : {s[:88]}")
             print(f"          cand: {c[:88]}")
-    print(f"\n  rejection rate: {rejected}/{n} — read the reasons above, not just the ratio")
+    print(f"\n  rejection rate: {rejected}/{n}, read the reasons above, not just the ratio")
 
 
 def _row(label: str, ok: bool, expected_ok: bool, detail: str) -> bool:
@@ -130,23 +130,23 @@ def main() -> int:
     checker = ConstraintChecker()
     hits = misses = 0
 
-    print("\nFACT CHECKER — closing the embedding blind spot")
+    print("\nFACT CHECKER, closing the embedding blind spot")
     print("=" * 74)
 
-    print("\n[1] INVERSIONS — must be REJECTED (embeddings score these ~0.78-0.96)")
+    print("\n[1] INVERSIONS, must be REJECTED (embeddings score these ~0.78-0.96)")
     for src, cand, emb in INVERSIONS:
         r = checker.check(Document(text=src), Document(text=cand))
         emb_s = f"embed={emb:.3f}" if emb is not None else "embed=n/a  "
         ok = _row(emb_s, r.ok, False, r.summary())
         hits, misses = (hits + 1, misses) if ok else (hits, misses + 1)
 
-    print("\n[2] FAITHFUL REWORDS — must be ACCEPTED (no false alarms)")
+    print("\n[2] FAITHFUL REWORDS, must be ACCEPTED (no false alarms)")
     for src, cand in FAITHFUL:
         r = checker.check(Document(text=src), Document(text=cand))
         ok = _row("reword", r.ok, True, r.summary())
         hits, misses = (hits + 1, misses) if ok else (hits, misses + 1)
 
-    print("\n[3] DROPPED FACTS — must be REJECTED (loss, not inversion)")
+    print("\n[3] DROPPED FACTS, must be REJECTED (loss, not inversion)")
     for src, cand in DROPPED:
         r = checker.check(Document(text=src), Document(text=cand))
         ok = _row("dropped", r.ok, False, r.summary())

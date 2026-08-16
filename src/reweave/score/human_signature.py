@@ -1,11 +1,11 @@
-"""Stage ④ — the human-signature scorer.
+"""Stage ④, the human-signature scorer.
 
 Blends the feature vector into a transparent 0..1 score (higher = more
 human-like) with a Verdict. This is the achievable, honestly-labelled half of
 'detection': it estimates how AI-uniform a text reads. It is NOT watermark
 detection and must never be presented as such (Invariant I5).
 
-The blend is a transparent weighted sum with documented normalisers — no trained
+The blend is a transparent weighted sum with documented normalisers, no trained
 model, so nothing to retrain as LLMs drift. Tune weights, don't fit them.
 """
 
@@ -33,7 +33,7 @@ def _inv(value: float | None, bad_ref: float) -> float | None:
 
 # Reference points sit near the HUMAN target so that AI text (which falls below on
 # the discriminative axes) maps lower. A ref set *below* both classes saturates the
-# gap to nothing — an early bug the harness caught.
+# gap to nothing, an early bug the harness caught.
 #
 # Only features that actually discriminate go in the SCORE. The harness measured
 # single-feature AUROC(human>ai) on real Darwin-vs-Gemma text:
@@ -103,7 +103,7 @@ class StatisticalScorer(Scorer):
 
         coverage = total_w / sum(_WEIGHTS.values())
         if coverage < self.MIN_COVERAGE:
-            # Not enough signal to judge — abstain rather than emit a confident
+            # Not enough signal to judge, abstain rather than emit a confident
             # wrong answer (e.g. a one-sentence AI-tell-laden string scoring high
             # because burstiness was unavailable).
             verdict = Verdict.UNCERTAIN

@@ -1,4 +1,4 @@
-"""Fact preservation by entailment — closing the rule checker's lexical gap.
+"""Fact preservation by entailment, closing the rule checker's lexical gap.
 
 `constraint_checker.py` catches negation and *listed* antonym flips. It cannot
 catch a reversal written in different words:
@@ -9,7 +9,7 @@ catch a reversal written in different words:
 No negator, no listed antonym, high embedding similarity (same topic). Every
 instrument we had says fine. An NLI model says CONTRADICTION.
 
-METHOD — SummaC (Laban, Schnabel, Bennett & Hearst, TACL 2022), with one
+METHOD, SummaC (Laban, Schnabel, Bennett & Hearst, TACL 2022), with one
 deliberate deviation.
 
   Faithful to the paper:
@@ -21,16 +21,16 @@ deliberate deviation.
       (SummaC-ZS): per candidate sentence, the best supporting source sentence;
       then the mean across candidate sentences.
 
-  Deviation — we do NOT compute the full M×N matrix:
+  Deviation, we do NOT compute the full M×N matrix:
     * SummaC scores *consistency* via max ENTAILMENT, where taking a max over all
       pairs is safe: the best supporter is the right one to keep. We need
-      CONTRADICTION, where a max over all pairs is actively wrong — two unrelated
+      CONTRADICTION, where a max over all pairs is actively wrong, two unrelated
       sentences in the same document routinely look contradictory ("the API is
       synchronous" vs "the webhook is asynchronous"), and one spurious pair would
       veto a good rewrite.
     * So contradiction is judged only on *aligned* pairs: each source claim is
       matched to its nearest candidate claim first, then judged. This is more
-      precise for our question and reduces an M×N call count to O(M) — which is
+      precise for our question and reduces an M×N call count to O(M), which is
       what makes an LLM backend affordable at all.
     * The cost of the deviation, stated plainly: a claim reversed AND moved to a
       lexically distant sentence may not align, and would then be reported as
@@ -39,7 +39,7 @@ deliberate deviation.
 Alignment uses embeddings when an embedder is supplied, and falls back to lexical
 set cosine. That split plays to each instrument's strength: embeddings are
 excellent at "are these two sentences about the same thing?" and blind only to
-polarity — which is precisely the question NLI then answers.
+polarity, which is precisely the question NLI then answers.
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ class NLIChecker(FactChecker):
 
     Honest limits:
       * Bounded by the NLI backend. On the six-dataset SummaC benchmark, the
-        best trained configuration reaches 74.4% balanced accuracy — automated
+        best trained configuration reaches 74.4% balanced accuracy, automated
         factual-consistency detection is an open problem, not a solved one. Do
         not read a pass as proof.
       * Bounded by alignment (see the deviation note above).
@@ -97,7 +97,7 @@ class NLIChecker(FactChecker):
             else contradiction_threshold
         )
         #: Hard cap so a long document cannot fan out into unbounded model calls.
-        #: Truncation is REPORTED in FactReport.detail — a silent cap would let a
+        #: Truncation is REPORTED in FactReport.detail, a silent cap would let a
         #: partial check read as a full one (I5).
         self.max_claims = max_claims
 
@@ -158,7 +158,7 @@ class NLIChecker(FactChecker):
                 entail_hits += 1
 
         # SummaC-ZS coverage: per source claim, its best support; mean across all.
-        # An unaligned claim contributes 0 — it found no support anywhere.
+        # An unaligned claim contributes 0, it found no support anywhere.
         coverage = entail_hits / len(src) if src else 1.0
 
         return FactReport(

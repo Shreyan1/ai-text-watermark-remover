@@ -1,4 +1,4 @@
-"""Stage ③ — the real regenerator, over a LOCAL open-weight model via Ollama.
+"""Stage ③, the real regenerator, over a LOCAL open-weight model via Ollama.
 
 This is the production shape of Stage ③: rebuild prose from Meaning, steered by
 VoiceProfile toward burstiness, contractions, the author's vocabulary, away from
@@ -21,11 +21,11 @@ from ..core.types import Document, Meaning, VoiceProfile
 
 _SYSTEM = (
     "You rewrite text so it reads like a specific human wrote it, not an AI. "
-    "Rules: vary sentence length hard — mix very short sentences with long ones. "
+    "Rules: vary sentence length hard, mix very short sentences with long ones. "
     "Use contractions. Prefer plain words. Never use: delve, tapestry, seamless, "
     "leverage, robust, ecosystem, testament, landscape, navigate, underscore. "
     "No rule-of-three lists, no tidy summary sentence at the end. "
-    "Keep every fact, name, and number, and never reverse a statement — if the "
+    "Keep every fact, name, and number, and never reverse a statement, if the "
     "source says something IS or DID, your rewrite must not say it IS NOT or "
     "DID NOT. Output only the rewritten text."
 )
@@ -57,10 +57,10 @@ class OllamaRegenerator(Regenerator):
         if voice.banned_terms:
             extra.append("Never use: " + ", ".join(sorted(voice.banned_terms)[:20]) + ".")
         if aggressiveness > 0.6:
-            extra.append("Restructure freely — do not mirror the original sentence order.")
+            extra.append("Restructure freely, do not mirror the original sentence order.")
 
-        # Pin the hard facts explicitly. Prompting is not a guarantee — the fact
-        # gate still verifies — but telling the model beats only catching it.
+        # Pin the hard facts explicitly. Prompting is not a guarantee, the fact
+        # gate still verifies, but telling the model beats only catching it.
         keep_nums = meaning.meta.get("must_keep_numerals") or []
         keep_ents = meaning.meta.get("must_keep_entities") or []
         if keep_nums:

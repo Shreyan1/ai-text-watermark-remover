@@ -1,14 +1,14 @@
 """End-to-end: the REAL local model (llama3.2:1b via Ollama) driving the full
 Reweave pipeline. Two demonstrations:
 
-  E1  Watermark removal, MEASURED. Text watermarked with our own key → full
-      pipeline (Ollama extract + regenerate) → re-score with our key. The
+  E1  Watermark removal, MEASURED. Text watermarked with our own key -> full
+      pipeline (Ollama extract + regenerate) -> re-score with our key. The
       mean-score must collapse toward baseline. This is the one honest
       before/after you can only do when you hold the key. (Inputs are the
       harness's synthetic watermarked text; the point is the measurable mark and
       its removal by a real model, not the input's readability.)
 
-  E2  Real content. A genuine Gemma response from the dataset → full pipeline →
+  E2  Real content. A genuine Gemma response from the dataset -> full pipeline ->
       human-signature before/after + semantic similarity. Google's watermark is
       NOT measurable here (no key); we report only what we can measure.
 
@@ -62,16 +62,16 @@ def make_pipeline(max_iter: int, sim_floor: float = SIM_FLOOR,
 
 def e1_watermark_removal(n: int = 3) -> None:
     print("\n" + "=" * 70)
-    print(f"E1 — REAL local model ({MODEL}) removing a watermark WE can measure")
+    print(f"E1, REAL local model ({MODEL}) removing a watermark WE can measure")
     print("=" * 70)
     cfg = SynthIDConfig()
     built = build(n=30, length=70)
     wm = built["corpora"]["watermarked"][:n]
     un_baseline = [score_text(r["text"], cfg) for r in built["corpora"]["unwatermarked"]]
 
-    # E1 proves the MECHANISM: call Stage ②→③ directly so a genuine regeneration
+    # E1 proves the MECHANISM: call Stage ②->③ directly so a genuine regeneration
     # always happens. (The gated Pipeline may keep the input if regeneration does
-    # not improve human-signature — correct for the product, wrong for this proof.)
+    # not improve human-signature, correct for the product, wrong for this proof.)
     scrub, ext, reg = UnicodeScrubber(), OllamaExtractor(model=MODEL), OllamaRegenerator(model=MODEL)
     befores, afters = [], []
     for i, row in enumerate(wm, 1):
@@ -81,7 +81,7 @@ def e1_watermark_removal(n: int = 3) -> None:
         after = score_text(out.text, cfg)
         befores.append(before)
         afters.append(after)
-        print(f"  sample {i}: watermark mean-score  {before:.3f} → {after:.3f}   "
+        print(f"  sample {i}: watermark mean-score  {before:.3f} -> {after:.3f}   "
               f"(Δ {before - after:+.3f})")
 
     base = sum(un_baseline) / len(un_baseline)
@@ -90,12 +90,12 @@ def e1_watermark_removal(n: int = 3) -> None:
     print(f"  watermarked, after  pipeline (avg): {sum(afters)/len(afters):.3f}")
     still = summary(afters, un_baseline)["tpr@fpr=1%"]
     print(f"  still detectable after (TPR@FPR=1% vs baseline): {still:.3f}")
-    print("  → a real, local, unwatermarked model collapsed a measurable watermark.")
+    print("  -> a real, local, unwatermarked model collapsed a measurable watermark.")
 
 
 def e2_real_content(n: int = 2) -> None:
     print("\n" + "=" * 70)
-    print(f"E2 — regenerating REAL Gemma text ({MODEL}); meaning + quality")
+    print(f"E2, regenerating REAL Gemma text ({MODEL}); meaning + quality")
     print("=" * 70)
     ai = []
     with open(os.path.join(DATA_ROOT, "synthid", "human_eval.jsonl"), encoding="utf-8") as fh:
@@ -113,7 +113,7 @@ def e2_real_content(n: int = 2) -> None:
         b = result.before.score if result.before else float("nan")
         a = result.after.score if result.after else float("nan")
         changed = result.output.text.strip() != text.strip()
-        print(f"\n  doc {i}: human-signature {b:.3f} → {a:.3f}   "
+        print(f"\n  doc {i}: human-signature {b:.3f} -> {a:.3f}   "
               f"semantic-sim={result.semantic_similarity:.2f}   "
               f"iters={result.iterations}  accepted-rewrite={changed}")
         print(f"    facts : {result.facts.summary() if result.facts else 'not checked'}")

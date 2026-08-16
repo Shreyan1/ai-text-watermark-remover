@@ -1,4 +1,4 @@
-"""Stage ④ — human-signature scorer (statistical, no training)."""
+"""Stage ④, human-signature scorer (statistical, no training)."""
 
 from .human_signature import StatisticalScorer
 

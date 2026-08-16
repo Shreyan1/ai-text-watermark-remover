@@ -5,7 +5,7 @@ numbers referenced here are measured in [RESULTS.md](../RESULTS.md).
 
 ---
 
-## 1. The pipeline — how a document flows
+## 1. The pipeline: how a document flows
 
 ```mermaid
 flowchart LR
@@ -20,23 +20,23 @@ flowchart LR
     BASE -->|"reads AI-flat"| S2
 
     subgraph STAGE2["② Extract"]
-        S2["Document → Meaning<br/><i>local LLM</i>"]
+        S2["Document -> Meaning<br/><i>local LLM</i>"]
     end
 
     S2 --> MEAN[["Meaning<br/>atomic points, no surface form"]]
     MEAN --> S3
 
     subgraph STAGE3["③ Regenerate"]
-        S3["Meaning → fresh prose<br/><b>LOCAL unwatermarked model</b>"]
+        S3["Meaning -> fresh prose<br/><b>LOCAL unwatermarked model</b>"]
     end
 
     S3 --> S4["④ Score<br/>human-signature"]
     S4 --> S5{"⑤ Gate"}
     S5 -->|"human ≥ 0.65<br/>AND topic kept<br/>AND facts kept"| OUT([Output])
-    S5 -->|"fail → raise aggressiveness<br/>max 4 iterations"| S3
+    S5 -->|"fail -> raise aggressiveness<br/>max 4 iterations"| S3
 
-    GUARD["Semantic guard<br/><i>embeddings — same topic?</i>"] -.->|"similarity ≥ 0.35"| S5
-    FACTS["Fact checker<br/><i>rules — same claims?</i>"] -.->|"no dropped/inverted facts"| S5
+    GUARD["Semantic guard<br/><i>embeddings, same topic?</i>"] -.->|"similarity ≥ 0.35"| S5
+    FACTS["Fact checker<br/><i>rules, same claims?</i>"] -.->|"no dropped/inverted facts"| S5
     MEAN -.->|"Constraints:<br/>must-keep numbers & names"| S3
     VOICE[/"VoiceProfile<br/>vocabulary, banned tells"/] -.-> S3
 
@@ -92,10 +92,10 @@ flowchart TB
 
 Each instrument's blind spot is another's competence, and the red boxes are the
 honest residue. Embedding blindness to negation is a documented property of
-distributional representations, not a tuning failure — no similarity floor fixes
+distributional representations, not a tuning failure, no similarity floor fixes
 it. The rules are lexical: NegEx negation plus a curated antonym list, so a
 reversal in different words is invisible to them. NLI sees that, but only because
-**embeddings do its alignment** — align lexically and it collapses to 2/8, since
+**embeddings do its alignment**, align lexically and it collapses to 2/8, since
 the reworded pairs never reach the model.
 
 Order matters: rules run first and NLI can only *add* findings, so a model that
@@ -103,11 +103,11 @@ is unavailable or wrong can never weaken the deterministic guarantee.
 
 ---
 
-## 2. Why it survives future models — the substrate attack
+## 2. Why it survives future models: the substrate attack
 
 ```mermaid
 flowchart TB
-    subgraph SCHEMES["Watermark schemes — all different"]
+    subgraph SCHEMES["Watermark schemes, all different"]
         K["KGW / green-list<br/>biases vocabulary split"]
         SY["SynthID-Text<br/>keyed tournament"]
         SE["Semantic watermarks<br/>SIR / XSIR"]
@@ -131,16 +131,16 @@ flowchart TB
 ```
 
 They differ in *how* they bias the sequence; they are identical in *depending* on
-it. We never model a scheme — we remove the ground it stands on. That is why a
+it. We never model a scheme, we remove the ground it stands on. That is why a
 scheme nobody has published yet is already handled.
 
 ---
 
-## 3. Stable core / swappable edge — dependencies point inward
+## 3. Stable core / swappable edge: dependencies point inward
 
 ```mermaid
 flowchart TB
-    subgraph EDGE["SWAPPABLE EDGE — changes often, has dependencies"]
+    subgraph EDGE["SWAPPABLE EDGE, changes often, has dependencies"]
         direction LR
         SC["scrub/<br/>unicode"]
         EX["extract/<br/>ollama"]
@@ -149,7 +149,7 @@ flowchart TB
         GD["guard/<br/>embedding"]
     end
 
-    subgraph CORE["STABLE CORE — zero dependencies, no scheme code"]
+    subgraph CORE["STABLE CORE, zero dependencies, no scheme code"]
         direction LR
         T["types.py<br/>data contracts"]
         I["interfaces.py<br/>5 stage ABCs"]
@@ -171,12 +171,12 @@ flowchart TB
 ```
 
 The core imports nothing from the edge and nothing third-party, so it cannot rot.
-Adopting a new model is one adapter plus one registry line — **if it requires a
+Adopting a new model is one adapter plus one registry line, **if it requires a
 core edit, an invariant was violated.**
 
 ---
 
-## 4. How the harness proves it — ground truth requires holding the key
+## 4. How the harness proves it: ground truth requires holding the key
 
 ```mermaid
 flowchart TB
@@ -192,7 +192,7 @@ flowchart TB
     BASE[["Unwatermarked baseline<br/>0.501"]] -.->|"compare"| DET2
     DET2 --> VERDICT([" Watermark gone<br/>still-detected 0.000"])
 
-    GOOG["Real Claude / Gemini text"] -.->|"key is secret —<br/>NOT measurable"| NOPE(["Can only report<br/>human-signature + meaning"])
+    GOOG["Real Claude / Gemini text"] -.->|"key is secret, <br/>NOT measurable"| NOPE(["Can only report<br/>human-signature + meaning"])
 
     style KEY fill:#744210,color:#fff
     style VERDICT fill:#22543d,color:#fff
@@ -200,13 +200,13 @@ flowchart TB
     style GOOG stroke-dasharray: 5 5
 ```
 
-You cannot verify removal of a *keyed* watermark without the key — so the harness
+You cannot verify removal of a *keyed* watermark without the key, so the harness
 watermarks with its own. The right branch is the permanent honesty boundary: for
 third-party text we report only what we can actually measure.
 
 ---
 
-## 5. The convergence loop — optimising to a fixed target
+## 5. The convergence loop: optimising to a fixed target
 
 ```mermaid
 stateDiagram-v2
@@ -220,7 +220,7 @@ stateDiagram-v2
     Regenerated --> Judged: score + guard + facts
 
     Judged --> Done: human ✓ AND topic ✓ AND facts ✓
-    Judged --> Regenerated: fail → aggressiveness +0.18
+    Judged --> Regenerated: fail -> aggressiveness +0.18
     Judged --> BestSoFar: iteration cap reached
 
     BestSoFar --> Done: emit best meaning-preserving candidate
@@ -228,7 +228,7 @@ stateDiagram-v2
 
     note right of Judged
         Target is FIXED: statistical human-ness.
-        Never a named detector — that is
+        Never a named detector, that is
         the arms race we refuse to enter.
     end note
 ```
@@ -244,11 +244,11 @@ detector shipping tomorrow requires no change here.
 flowchart LR
     subgraph PROVEN["✅ Measured"]
         A["Watermark detection<br/>AUROC 1.000"]
-        B["Removal by real model<br/>0.708 → 0.506"]
+        B["Removal by real model<br/>0.708 -> 0.506"]
         C["Invariant I4<br/>10% edit survives<br/>100% regen dies"]
         D["Embedding guard<br/>margin +0.608"]
-        I["Fact gate — rules<br/>5/5 lexical inversions<br/>0 false alarms"]
-        J["Fact gate — NLI<br/>8/8 reworded reversals<br/>rules alone: 0/8"]
+        I["Fact gate, rules<br/>5/5 lexical inversions<br/>0 false alarms"]
+        J["Fact gate, NLI<br/>8/8 reworded reversals<br/>rules alone: 0/8"]
     end
 
     subgraph OPEN["🚧 Not proven"]

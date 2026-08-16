@@ -1,4 +1,4 @@
-"""Removal attacks — the token-substrate attack, parameterised by how much of the
+"""Removal attacks, the token-substrate attack, parameterised by how much of the
 sequence we regenerate. Operates in word space against the harness's ground-truth
 watermark. This is where Invariant I4 is proven with numbers: removal strength
 tracks the *fraction of tokens whose identity changes*.

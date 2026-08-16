@@ -1,4 +1,4 @@
-"""The fact gate — did the rewrite keep what it was supposed to keep?
+"""The fact gate, did the rewrite keep what it was supposed to keep?
 
 This exists because the semantic guard is measurably blind to truth value. The
 harness scored these pairs with local sentence embeddings:
@@ -8,21 +8,21 @@ harness scored these pairs with local sentence embeddings:
     "revenue increased 40%"  vs "revenue decreased 40%"      -> 0.776
 
 All three sail past any usable similarity floor, because embeddings encode topic
-and these pairs share their topic exactly. That is not a tuning problem — it is
+and these pairs share their topic exactly. That is not a tuning problem, it is
 what the representation is for. So the fix is not a better floor; it is a second
 check that looks at the thing embeddings discard.
 
 Three tests, cheapest first:
-  1. numerals   — every number in the source must still be present
-  2. entities   — proper nouns must survive (coverage floor, since a reword may
+  1. numerals  , every number in the source must still be present
+  2. entities  , proper nouns must survive (coverage floor, since a reword may
                   legitimately pronominalise some)
-  3. polarity   — align each source claim to its nearest candidate claim and
+  3. polarity  , align each source claim to its nearest candidate claim and
                   compare negation + antonym direction
 
 Alignment uses set cosine, |A∩B|/sqrt(|A|·|B|), and is assigned greedily
 one-to-one. Both choices were forced by measurement, not taste. The overlap
-coefficient |A∩B|/min(|A|,|B|) looks like the obvious pick — it tolerates the
-length changes a rewrite makes — but it scores a one-word fragment at a perfect
+coefficient |A∩B|/min(|A|,|B|) looks like the obvious pick, it tolerates the
+length changes a rewrite makes, but it scores a one-word fragment at a perfect
 1.0 against any sentence containing that word. On real Gemma output, headings
 like "Metaphor:" hijacked whole paragraphs and produced phantom inversions.
 Cosine penalises that size mismatch. Greedy one-to-one then stops several source
@@ -58,7 +58,7 @@ class ConstraintChecker(FactChecker):
     """Deterministic, zero-dependency fact preservation check.
 
     Honest limits, stated up front:
-      * It catches *lexical* inversion — a negator or a known antonym flipping.
+      * It catches *lexical* inversion, a negator or a known antonym flipping.
         A claim rewritten into an opposite meaning with entirely different words
         ("sales climbed" -> "sales were disappointing") is not caught.
       * `_ANTONYMS` is a finite list. It covers the common quantitative and

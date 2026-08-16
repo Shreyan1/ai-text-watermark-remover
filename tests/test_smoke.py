@@ -1,4 +1,4 @@
-"""Smoke tests — prove the stable core + working stages hold together.
+"""Smoke tests, prove the stable core + working stages hold together.
 
 These use only zero-dependency pieces (scrubber, scorer) plus the wiring stubs,
 so they run with no models installed. They validate the CONTRACTS, not removal
@@ -55,7 +55,7 @@ def test_scorer_ranks_human_above_ai():
     )
     human = (
         "I fired the whole plan on a Tuesday. Rebuilt it in three days flat, running "
-        "on cold coffee and spite. It worked — barely — and the client never noticed "
+        "on cold coffee and spite. It worked, barely, and the client never noticed "
         "the seams. That near-miss taught me more than any postmortem ever has."
     )
     s = StatisticalScorer()
@@ -126,7 +126,7 @@ def test_fact_checker_ignores_pseudo_negation():
 
 
 def test_fact_checker_is_self_consistent():
-    """A document must never contradict itself — the invariant that caught the
+    """A document must never contradict itself, the invariant that caught the
     degenerate-alignment bug on real markdown output."""
     c = ConstraintChecker()
     text = (
